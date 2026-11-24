@@ -26,7 +26,7 @@ export function Hero() {
                 <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand opacity-50 motion-reduce:animate-none" />
                 <span className="relative inline-flex size-2 rounded-full bg-brand" />
               </span>
-              Phase 1 of 15 · Foundation online
+              Phase 2 of 15 · Data layer online
             </Badge>
 
             <h1 className="mt-6 font-display text-5xl leading-[1.02] font-semibold tracking-[-0.035em] text-balance sm:text-6xl lg:text-[4.5rem]">
@@ -35,8 +35,8 @@ export function Hero() {
 
             <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
               Atrium is a production-oriented learning platform built in deliberate phases: secure
-              API foundations, a scalable interface, and quality gates that hold. The foundation is
-              verified. Domain features are next.
+              API foundations, connected persistence, and quality gates that hold. The data layer is
+              verified. Accounts and domain features are next.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">

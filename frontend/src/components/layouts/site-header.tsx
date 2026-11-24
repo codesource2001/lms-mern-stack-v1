@@ -32,7 +32,7 @@ export function SiteHeader() {
         <div className="flex items-center gap-3">
           <Badge variant="brand" className="hidden sm:inline-flex">
             <span className="size-1.5 rounded-full bg-brand" aria-hidden="true" />
-            Phase 1
+            Phase 2
           </Badge>
           <a
             href="#roadmap"

@@ -107,13 +107,17 @@ Create files only when the phase needs them. Do not generate empty modules in ad
 
 ### MongoDB and Redis
 
-- Design indexes from real query shapes. Every list endpoint is paginated with a hard maximum.
+- Design indexes from real query shapes. Every list endpoint is paginated with a hard maximum and uses `shared/query` helpers; never introduce an unbounded list query.
 - Enforce uniqueness with database indexes. Do not implement check-then-insert races.
 - Use transactions for multi-document invariants when the deployment supports them; otherwise redesign the write path.
 - Do not store large binaries in documents.
+- Build models with `createBaseSchema()`. It applies timestamps at construction and normalizes JSON to `id` without `_id` or `__v`.
+- Soft delete is opt-in via `applySoftDelete()`. Active-record queries must add `NOT_DELETED_FILTER` explicitly; do not hide deleted records globally.
 - Every cache must define key, TTL, invalidation, and behavior on miss/outage.
 - Redis is not a second system of record.
-- Close connections on shutdown and report dependency health through readiness, not liveness.
+- The API does not listen until MongoDB and Redis connect. Keep `/health` dependency-free and report dependency health through `/health/ready`.
+- Close connections on shutdown and bound every startup/readiness wait.
+- Seeders must be idempotent and registered in dependency order in `src/seeds/seed.registry.ts`.
 
 ---
 
@@ -199,6 +203,7 @@ Commands:
 npm run test --workspace @atrium/backend
 npm run test --workspace @atrium/frontend
 npm run test:coverage
+npm run seed --workspace @atrium/backend
 ```
 
 Coverage is a signal, not a target to game. Auth, authorization, enrollment, grading, and certificates are the priority surfaces.
@@ -263,8 +268,8 @@ Never silently continue into a new phase.
 
 ---
 
-## 10. Current state (Phase 1 complete)
+## 10. Current state (Phase 4 complete)
 
-- Implemented: workspace tooling, React shell, Express foundation, health/API root, error contract, security middleware, local Mongo/Redis Compose definitions, CI, docs.
-- Not implemented: database connection, request validation middleware, auth, RBAC, domain features, deployment.
-- Next: Phase 2 — database and backend foundation. See `PLAN.md`.
+- Implemented: workspace tooling, React shell, Express foundation, Mongo/Redis connections with retries and readiness, schema and repository conventions, request validation, bounded query helpers, seed runner, Zod-first OpenAPI + Swagger UI, auth/RBAC with session rotation and reuse detection, CSRF defense, audit logging, email abstraction, frontend foundation (primitives, layouts, Axios refresh handling, Zustand, route guards, auth pages, lazy loading, error boundaries), CI, docs.
+- Not implemented: domain models/collections, business endpoints, file storage, deployment.
+- Next: Phase 5 — user management. See `PLAN.md`.

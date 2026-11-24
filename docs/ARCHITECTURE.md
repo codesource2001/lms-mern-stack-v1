@@ -1,11 +1,11 @@
 # Atrium LMS — Architecture
 
-| Field    | Value                                                |
-| -------- | ---------------------------------------------------- |
-| Status   | Phase 1 baseline — accepted                          |
-| Updated  | 24 November 2026                                     |
-| Scope    | Repository, application shells, contracts, direction |
-| Audience | Maintainers, reviewers, AI agents                    |
+| Field    | Value                                            |
+| -------- | ------------------------------------------------ |
+| Status   | Phase 2 baseline — accepted                      |
+| Updated  | 24 November 2026                                 |
+| Scope    | Repository, applications, persistence, contracts |
+| Audience | Maintainers, reviewers, AI agents                |
 
 This document describes the architecture that the repository enforces today and the intended shape of later phases. Where something is planned rather than implemented, it is labelled **planned**.
 
@@ -22,7 +22,7 @@ Atrium is a learning management system delivered in 15 phases. The architecture 
 5. **Upgrade discipline.** Versions are pinned exactly and verified before adoption. Architectural changes require an ADR.
 6. **Honest delivery.** No placeholder endpoints or UI that implies unimplemented capability.
 
-Non-goals for Phase 1: authentication, database models, domain features, payments, uploads, real-time notifications, and production deployment. Those arrive in the phases defined in [`../PLAN.md`](../PLAN.md).
+Phase 2 establishes the persistence and cache foundation, schema conventions, request validation, and the generated API contract. Authentication, domain models, payments, uploads, real-time notifications, and production deployment remain out of scope until the phases defined in [`../PLAN.md`](../PLAN.md).
 
 ---
 
@@ -47,7 +47,7 @@ flowchart LR
 - The API is the policy enforcement point. The SPA hides controls for usability only.
 - MongoDB and Redis are internal services. They are never exposed directly to clients and never hold unhashed credentials or tokens.
 
-**Today:** the web app renders a public status page; the API exposes `GET /health` and `GET /api/v1`; MongoDB and Redis are defined in Compose but not connected to the API.
+**Today:** the web app renders a public status page; the API exposes `GET /health`, `GET /health/ready`, `GET /api/v1`, and non-production Swagger UI at `/api-docs`; MongoDB and Redis are connected with startup retries, readiness probes, and graceful shutdown.
 
 ---
 
@@ -65,7 +65,7 @@ lms-mern-v1/
 Rules:
 
 - No cross-imports between workspaces. The frontend must not import backend source, and the backend must not import frontend source.
-- Shared types are expressed as API contracts (OpenAPI from Phase 2) and duplicated deliberately on the client as narrow view models, not by creating a third shared package prematurely.
+- Shared types are expressed as API contracts (OpenAPI 3.1, generated in Phase 2) and duplicated deliberately on the client as narrow view models, not by creating a third shared package prematurely.
 - Each workspace owns its `package.json`, `tsconfig`, lint config, tests, and build. Root tooling is for orchestration only.
 - Root scripts fan out with `--workspaces`; CI builds and tests both apps independently.
 
@@ -94,7 +94,7 @@ route → controller → service → repository → model
 - Controllers do not touch Mongoose models or build queries.
 - Services do not accept `Request`/`Response` objects. They receive plain typed input and return plain typed results.
 - Repositories do not throw HTTP errors. They return data or domain-specific failures.
-- A module does not import another module's model or repository. Cross-module work goes through the other module's service (planned for Phase 2+).
+- A module does not import another module's model or repository. Cross-module work goes through the other module's service.
 - Routes and controllers stay thin. A controller with business branching is a design defect.
 
 ### 4.2 Module anatomy (target)
@@ -104,10 +104,12 @@ backend/src/
 ├── app.ts                     Express composition, no listening
 ├── server.ts                  Process lifecycle, listening, signals
 ├── config/                    Validated environment, logger
-├── middlewares/               Cross-cutting HTTP middleware
+├── middlewares/               Cross-cutting HTTP middleware, request validation
 ├── routes/                    Versioned API root
-├── shared/                    Errors, HTTP envelope, pagination, time
-├── infrastructure/            planned: db, redis, storage, mail
+├── shared/                    Errors, HTTP envelope, async, query helpers, shutdown
+├── infrastructure/            Mongo/Redis connections, readiness, schema plugins
+├── docs/                      Zod-first OpenAPI generation and Swagger UI
+├── seeds/                     Seed runner, registry, CLI
 ├── modules/
 │   ├── health/
 │   │   ├── health.routes.ts
@@ -142,11 +144,11 @@ sequenceDiagram
   C->>M: HTTP request
   M->>M: request ID, logging, Helmet, CORS, rate limit, body parse
   M->>R: dispatch
-  R->>V: validate params/query/body (planned Phase 2)
-  V-->>R: typed input or 422
+  R->>V: validate params/query/body
+  V-->>R: req.validated or 422
   R->>A: authenticate + require permission (planned Phase 3)
   A-->>R: principal or 401/403
-  R->>Ctrl: validated request
+  R->>Ctrl: validated request via getValidated()
   Ctrl->>S: typed command/query
   S->>S: business rules + ownership policy
   S->>Repo: persistence intent
@@ -197,8 +199,10 @@ Error classes extend `AppError` and carry `statusCode`, stable `code`, and optio
 ### 4.5 Startup and configuration
 
 - Environment variables are parsed and validated by Zod at process start. The process fails loudly with field-level details if configuration is invalid.
-- `app.ts` builds the Express application; `server.ts` owns listening, signal handling, and process exit. This split keeps Supertest integration tests free of ports.
-- Graceful shutdown stops accepting connections, closes idle connections, waits for in-flight requests, and force-exits after 10 seconds. Phase 2 extends this to MongoDB and Redis.
+- `app.ts` builds the Express application; `server.ts` owns dependency connection, listening, signal handling, and process exit. This split keeps Supertest integration tests free of ports and infrastructure.
+- Startup connects MongoDB and Redis before listening. Failures are retried, then reported as a dependency-specific fatal error and exit code `1`.
+- Graceful shutdown stops accepting connections, closes idle connections, waits for in-flight requests, disconnects Redis and MongoDB, and force-exits after 10 seconds.
+- `/health` is liveness-only. `/health/ready` checks MongoDB and Redis with a bounded timeout and returns `503` when either is unavailable.
 - `trust proxy` is explicit (`TRUST_PROXY_HOPS`, default `0`). Rate limiting and client IPs are not guesses.
 
 ### 4.6 Observability
@@ -209,7 +213,7 @@ Error classes extend `AppError` and carry `statusCode`, stable `code`, and optio
 - Request IDs correlate client reports, logs, and error bodies.
 - `/health` is excluded from access logs to avoid noise.
 
-Metrics, tracing, and log shipping are deployment-phase work (Phase 14/15), not Phase 1.
+Metrics, tracing, and log shipping are deployment-phase work (Phase 14/15), not part of this foundation.
 
 ---
 
@@ -255,7 +259,7 @@ Rules:
 - Tailwind CSS 4 with CSS-first semantic tokens in `src/styles/globals.css`. Components use semantic classes (`bg-background`, `text-muted-foreground`, `border-border`), not raw hex values.
 - Brand palette: deep green and ink neutrals with a warm amber accent. Light theme is the default; dark tokens exist for Phase 4.
 - Typography: Instrument Sans for display, Inter for body, loaded locally through Fontsource.
-- Radix-based primitives (via shadcn ownership model) provide keyboard and screen-reader behavior. Phase 1 ships Button, Badge, and Card.
+- Radix-based primitives (via shadcn ownership model) provide keyboard and screen-reader behavior. The foundation currently ships Button, Badge, and Card; the full library arrives in Phase 4.
 - Every page has one `h1`, a skip link, visible focus states, and motion that respects `prefers-reduced-motion`.
 - Color contrast is checked when new tokens or states are introduced (WCAG AA target).
 
@@ -312,17 +316,20 @@ Phase placement:
 
 ### 7.1 MongoDB as system of record
 
-- One connection per process with pooling, configured in Phase 2.
+- One pooled connection per process, with startup retries and lifecycle logging.
+- Models are created through `createBaseSchema()`, which applies timestamps at construction and normalizes JSON to expose `id` without `_id` or `__v`.
 - Schema-level invariants: required fields, enums, immutable identifiers, timestamps.
-- Compound indexes are designed from actual query shapes. Every list endpoint is paginated with a maximum page size.
+- Compound indexes are designed from actual query shapes. Every list endpoint is paginated with a maximum page size of 100.
 - Uniqueness is enforced by database indexes, not check-then-write logic. Duplicate enrollment under concurrency is a Phase 8 acceptance criterion.
 - Multi-document invariants use transactions where MongoDB supports them; otherwise the design avoids the need.
-- Soft delete is a deliberate per-entity decision, not a blanket plugin. Deleted or suspended data must still satisfy access policies.
+- Soft delete is a deliberate per-entity decision, not a blanket plugin. Deleted records remain visible to explicit administrative queries; active-record queries must add `NOT_DELETED_FILTER`.
 - Large binaries are never stored in documents. Phase 6 introduces a storage abstraction.
+
+Detailed connection, schema, repository, and query rules: [`DATABASE.md`](DATABASE.md).
 
 ### 7.2 Redis responsibilities
 
-Redis is not a second database. It is allowed for:
+Redis is not a second database. The client is connected with bounded startup and persistent runtime reconnects, but no application cache keys exist yet. It is allowed for:
 
 - Session and refresh-token metadata where revocation speed matters (Phase 3).
 - Rate-limit and throttling counters across instances (Phase 3/13).
@@ -341,7 +348,7 @@ Every cache must answer: what is the key, what is the TTL, what invalidates it, 
 
 ## 8. Security architecture
 
-This section states the target design. Phase 1 implements only the transport-level and error-contract controls listed in [SECURITY.md](../SECURITY.md).
+This section states the target design. Phase 2 implements transport controls, the error contract, dependency isolation, request validation, and query hardening. Authentication and authorization remain Phase 3 work. See [SECURITY.md](../SECURITY.md).
 
 ### 8.1 Authentication (Phase 3)
 
@@ -366,8 +373,8 @@ Full rationale and alternatives: [ADR-0002](adr/0002-authentication-token-strate
 
 - Helmet security headers on the API. Production CSP for the SPA is configured at the edge in Phase 14.
 - Explicit CORS allowlist with credentials; wildcard origins are forbidden.
-- JSON body limit of 1 MB in Phase 1; endpoint-specific limits for uploads later.
-- Rate limiting on the API; stricter, keyed limits for auth endpoints in Phase 3. The Phase 1 limiter uses the default in-memory store, so it is per-process and not a distributed guarantee.
+- JSON body limit of 1 MB today; endpoint-specific limits for uploads later.
+- Rate limiting on the API; stricter, keyed limits for auth endpoints in Phase 3. The current limiter uses the default in-memory store, so it is per-process and not a distributed guarantee.
 - CSRF: cookie-authenticated mutations require Origin/Referer validation in addition to `SameSite` (Phase 3).
 - No secrets in client bundles. Only `VITE_` variables are exposed, and they are validated.
 
@@ -407,7 +414,7 @@ Principles:
 - Migrations/index builds are explicit release steps, not implicit startup side effects for destructive changes.
 - Logs go to stdout and are collected by the platform.
 
-Phase 1 provides the Compose definitions for local MongoDB and Redis only. No application containers exist yet.
+Phase 2 provides the Compose definitions for local MongoDB and Redis only. No application containers exist yet.
 
 ---
 
@@ -419,7 +426,7 @@ Phase 1 provides the Compose definitions for local MongoDB and Redis only. No ap
 | Unit                | Vitest                        | Services, policies, pure functions                 |
 | API integration     | Vitest + Supertest            | Middleware order, envelopes, status codes, CORS    |
 | Component           | Vitest + Testing Library      | Accessible rendering and user-visible behavior     |
-| Contract            | OpenAPI validation (Phase 2)  | Documented schema matches implementation           |
+| Contract            | OpenAPI 3.1 generation tests  | Documented paths and schemas stay present          |
 | End-to-end          | Playwright (Phase 14)         | Real journeys across web, API, Mongo, Redis        |
 | Security regression | Supertest matrices (Phase 13) | 401/403/404 and object-level authorization         |
 
@@ -434,31 +441,35 @@ Accepted decision records:
 - [ADR-0001 — Modular monolith with layered feature modules](adr/0001-modular-monolith.md)
 - [ADR-0002 — Authentication token and session strategy](adr/0002-authentication-token-strategy.md)
 - [ADR-0003 — Runtime and toolchain pinning](adr/0003-runtime-and-toolchain.md)
+- [ADR-0004 — Zod-first OpenAPI contracts](adr/0004-zod-first-openapi.md)
 
 Open decisions tracked in `PLAN.md`:
 
-1. OpenAPI generation approach (Zod-first preferred) — Phase 2.
-2. Email provider and local sink — Phase 3.
-3. Storage provider behind an abstraction — Phase 6.
-4. Payment provider and regional requirements — Phase 8.
-5. Background job runner — Phase 12.
-6. TypeScript 7 adoption once `typescript-eslint` supports it — quarterly review.
-7. Node 26 LTS adoption, coordinated with Docker base images and CI — Phase 14.
+1. Email provider and local sink — Phase 3.
+2. Storage provider behind an abstraction — Phase 6.
+3. Payment provider and regional requirements — Phase 8.
+4. Background job runner — Phase 12.
+5. TypeScript 7 adoption once `typescript-eslint` supports it — quarterly review.
+6. Node 26 LTS adoption, coordinated with Docker base images and CI — Phase 14.
 
 ---
 
-## 12. Phase 1 scope map
+## 12. Phase 2 scope map
 
-| Concern                             | Implemented | Deferred to                   |
-| ----------------------------------- | ----------- | ----------------------------- |
-| Monorepo + tooling                  | ✅          | —                             |
-| Response/error contract             | ✅          | —                             |
-| Request IDs + logging               | ✅          | metrics Phase 14              |
-| Helmet/CORS/rate limit              | ✅ (basic)  | distributed limits Phase 3/13 |
-| Frontend shell + routing            | ✅          | app layouts Phase 4           |
-| Design tokens + primitives          | ✅          | full library Phase 4          |
-| MongoDB/Redis runtime               | Definitions | Phase 2                       |
-| Persistence + validation middleware | ❌          | Phase 2                       |
-| AuthN/AuthZ                         | ❌          | Phase 3                       |
-| Domain features                     | ❌          | Phases 5–12                   |
-| Deployment                          | ❌          | Phase 14                      |
+| Concern                         | Implemented | Deferred to                   |
+| ------------------------------- | ----------- | ----------------------------- |
+| Monorepo + tooling              | ✅          | —                             |
+| Response/error contract         | ✅          | —                             |
+| Request IDs + logging           | ✅          | metrics Phase 14              |
+| Helmet/CORS/rate limit          | ✅ (basic)  | distributed limits Phase 3/13 |
+| Frontend shell + routing        | ✅          | app layouts Phase 4           |
+| Design tokens + primitives      | ✅          | full library Phase 4          |
+| MongoDB/Redis connections       | ✅          | domain indexes Phase 6+       |
+| Readiness + graceful shutdown   | ✅          | orchestration probes Phase 14 |
+| Schema + repository conventions | ✅          | domain models Phase 3+        |
+| Validation + query helpers      | ✅          | feature filters with models   |
+| Zod-first OpenAPI + Swagger UI  | ✅          | auth schemes Phase 3          |
+| Seed runner                     | ✅ (empty)  | role/permission data Phase 3  |
+| AuthN/AuthZ                     | ❌          | Phase 3                       |
+| Domain features                 | ❌          | Phases 5–12                   |
+| Deployment                      | ❌          | Phase 14                      |

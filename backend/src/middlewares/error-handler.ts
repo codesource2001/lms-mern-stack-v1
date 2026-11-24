@@ -11,6 +11,7 @@ interface NormalizedError {
   code: string;
   message: string;
   details?: FieldError[];
+  context?: Record<string, unknown>;
 }
 
 function normalizeBodyParserError(error: unknown): NormalizedError | undefined {
@@ -57,6 +58,7 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
       code: error.code,
       message: error.message,
       ...(error.details === undefined ? {} : { details: error.details }),
+      ...(error.context === undefined ? {} : { context: error.context }),
     };
   } else if (error instanceof ZodError) {
     normalized = {
@@ -94,6 +96,10 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
 
   if (normalized.details !== undefined) {
     payload.errors = normalized.details;
+  }
+
+  if (normalized.context !== undefined) {
+    payload.context = normalized.context;
   }
 
   res.status(normalized.statusCode).json(payload);

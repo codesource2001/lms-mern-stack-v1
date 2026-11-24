@@ -15,6 +15,11 @@ export interface ErrorPayload {
   code: string;
   errors?: FieldError[];
   requestId?: string;
+  /**
+   * Safe diagnostic metadata, never an internal error or stack trace.
+   * Used by operational endpoints such as readiness.
+   */
+  context?: Record<string, unknown>;
 }
 
 interface SuccessOptions<TData, TMeta> {

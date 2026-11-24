@@ -3,11 +3,11 @@
 | Field            | Value                      |
 | ---------------- | -------------------------- |
 | Project          | Atrium LMS (`lms-mern-v1`) |
-| Current build    | Phase 1 — foundation only  |
+| Current build    | Phase 3 — auth and RBAC    |
 | Production ready | **No**                     |
 | Last reviewed    | 24 November 2026           |
 
-Atrium is being built in phases. Phase 1 establishes secure defaults and a non-leaking error contract, but it does **not** include authentication, authorization, or a database connection. Do not deploy this build as a public learning platform.
+Atrium is being built in phases. Phase 3 implements secure account lifecycle, permission-based authorization, session rotation with reuse detection, CSRF defense, audit logging, and email verification/password reset. It does **not** include domain features or production deployment. Do not deploy this build as a public learning platform.
 
 ---
 
@@ -49,7 +49,34 @@ There is no security SLA for this phase. Once deployment exists (Phase 14), this
 
 ---
 
-## 3. Security controls implemented in Phase 1
+## 3. Security controls implemented in Phase 3
+
+### Authentication and authorization
+
+- **Argon2id passwords** with configured memory, time, and parallelism. Password hashes are `select: false`; verification uses constant-time comparison via Argon2.
+- **Short-lived access JWTs** (15 minutes by default) are returned in the response body and held in memory by the client. They are never stored in browser storage.
+- **Rotating opaque refresh tokens** are delivered in an `HttpOnly`, `Secure` (production), `SameSite=Lax` cookie scoped to the auth path. Only SHA-256 hashes are stored.
+- **Reuse detection** revokes the session and all of its refresh tokens and writes an audit entry.
+- **Server-side sessions** are the revocation source of truth. Logout, logout-all, password change, and password reset revoke sessions.
+- **Access-token verification checks session and user state**, so suspension and revocation take effect immediately.
+- **Permission-based authorization** via `requireAuth` and `requirePermission`. No role-name string checks are used in business code.
+- **Four seeded roles** (Super Admin, Admin, Instructor, Student) with granular permission codes.
+- **Account lockout** after repeated failed logins, with progressive backoff.
+- **Email verification and password reset** use single-use, hashed, expiring tokens.
+- **CSRF defense** validates `Origin` or `Referer` on cookie-authenticated mutations and uses `SameSite=Lax`.
+- **Audit logging** records login, logout, reuse detection, password changes, resets, profile updates, and email delivery failures.
+
+### Data layer
+
+- **Authenticated connections** — MongoDB requires a username/password and Redis requires a password. Local Compose binds both to `127.0.0.1` only.
+- **Fail-closed startup** — the API does not listen until MongoDB and Redis connect. Failures are retried a bounded number of times, then reported with the dependency name and the environment variable to check.
+- **Bounded waits** — every startup attempt, readiness probe, and shutdown step has a timeout. No dependency can hang process boot or termination indefinitely.
+- **Production placeholder rejection** — `local-dev-only-change-me` is rejected when `NODE_ENV=production`; deployments must inject real secrets.
+- **Readiness without leakage** — `/health/ready` returns only per-dependency status and latency. It never returns connection strings, credentials, driver errors, or stack traces.
+- **Liveness isolation** — `/health` never touches a dependency, so a database outage cannot trigger a restart loop.
+- **Schema conventions** — models are built through `createBaseSchema()`, which applies timestamps and hides `_id`/`__v` from JSON. Soft delete is opt-in and never silently applied.
+- **Bounded queries** — the only sanctioned list helpers cap page size at 100, allowlist sort fields, reject unknown filters, and require escaping of search terms used in regexes.
+- **Idempotent seeding** — the runner executes seeds in dependency order and stops at the first failure. Phase 2 registers no seed data.
 
 ### API transport and headers
 
@@ -59,23 +86,27 @@ There is no security SLA for this phase. Once deployment exists (Phase 14), this
 - **Global rate limiting** — `express-rate-limit` with configurable window/limit (default 120 requests per 60 seconds per IP). Health checks and preflight requests are skipped. Rate-limited responses use the standard error envelope with `429 RATE_LIMITED`.
 - **Explicit proxy trust** — `TRUST_PROXY_HOPS` defaults to `0`. Client IPs are not taken from forwarded headers unless a deployment explicitly configures trusted hops.
 - **Request IDs** — every response carries `x-request-id`. Client-supplied IDs must match `[A-Za-z0-9._-]{8,64}` or are replaced with a UUID, preventing log injection and unbounded values.
-- **Graceful shutdown** — SIGINT/SIGTERM stop accepting connections, close idle connections, and force-exit after 10 seconds, bounding the window for stuck requests.
+- **Graceful shutdown** — SIGINT/SIGTERM stop accepting connections, close idle connections, drain in-flight requests, disconnect Redis and MongoDB, and force-exit after 10 seconds.
 
 ### Application and data handling
 
 - **Configuration validation** — all backend environment variables are parsed by Zod at startup. Invalid configuration fails fast with field-level messages and never falls back to insecure defaults.
 - **Centralized error handling** — known errors use stable codes; unknown errors become a generic `500 INTERNAL_SERVER_ERROR`. Stack traces, database details, and internal paths are not returned to clients.
-- **Structured logging with redaction** — Pino redacts authorization headers, cookies, `set-cookie`, passwords, tokens, and refresh tokens. API responses are not logged by default.
+- **Structured logging with redaction** — Pino redacts authorization headers, cookies, `set-cookie`, passwords, tokens, and refresh tokens. API responses are not logged by default. Connection lifecycle logs contain dependency names, never connection strings.
+- **Request validation** — Zod validates params, query, and body at the boundary, returning `422 VALIDATION_ERROR` with source-qualified fields. The middleware is implemented and tested but not yet used by a production route.
+- **Generated API contract** — OpenAPI 3.1 is generated from Zod schemas. Swagger UI is mounted only outside production or with `ENABLE_API_DOCS=true`, and the relaxed CSP applies only while docs are enabled.
 - **No client secrets** — only `VITE_*` variables are exposed to the bundle, and they are validated. No secrets exist in the frontend today.
 - **Strict TypeScript** — `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, and `verbatimModuleSyntax` reduce classes of null/undefined and import defects.
-- **Dependency pinning** — exact versions and a committed lockfile. `npm install` reported **0 known vulnerabilities** at the Phase 1 baseline; this is point-in-time evidence, not a guarantee.
+- **Dependency pinning** — exact versions and a committed lockfile. `npm install` reported **0 known vulnerabilities** at the Phase 2 baseline; this is point-in-time evidence, not a guarantee.
 
 ### Local infrastructure
 
 - MongoDB 8.3 requires authentication; Redis 8.12 requires a password and runs with append-only persistence.
 - Both services bind to **`127.0.0.1` only**, so they are not reachable from the local network by default.
 - Compose credentials are development placeholders (`local-dev-only-change-me`) defined in `.env.example`. They must never be reused outside a developer machine.
+- The API rejects those placeholders when `NODE_ENV=production`.
 - Containers include health checks and named volumes.
+- If host ports are changed for local conflicts, `MONGODB_URI` and `REDIS_URL` must be updated to match. The API fails closed rather than silently falling back.
 
 ### Engineering process
 
@@ -87,30 +118,34 @@ There is no security SLA for this phase. Once deployment exists (Phase 14), this
 
 ## 4. Known gaps and limitations
 
-These are intentional for Phase 1. Do not mistake the presence of a control above for end-to-end security.
+These are intentional for Phase 3. Do not mistake the presence of a control above for end-to-end security.
 
-| Gap                                     | Impact                                                       | Planned phase      |
-| --------------------------------------- | ------------------------------------------------------------ | ------------------ |
-| No authentication                       | Every endpoint is public                                     | 3                  |
-| No authorization / RBAC                 | No protected resources exist yet; no permission enforcement  | 3                  |
-| No CSRF protection                      | No cookie-authenticated mutations exist yet                  | 3                  |
-| No account lockout or auth rate limits  | Not applicable until login exists                            | 3                  |
-| No audit logging                        | Administrative actions cannot be attributed                  | 3                  |
-| No database or cache connection         | Health is liveness only; no readiness signal                 | 2                  |
-| Rate limiter uses in-memory store       | Per-process limits; reset on restart; not distributed        | 3 / 13             |
-| No TLS termination                      | Local HTTP only                                              | 14                 |
-| No CSP for the SPA                      | API Helmet CSP does not protect the static frontend          | 14                 |
-| No WAF, bot defense, or DDoS protection | Hosting-layer concern                                        | 14                 |
-| No MFA                                  | Account takeover resistance is password-only                 | Post-Phase 3 spike |
-| No file upload controls                 | Upload features do not exist yet                             | 6                  |
-| No backups or restore drills            | No production data exists                                    | 14 / 15            |
-| No SBOM or provenance attestation       | Supply-chain visibility is limited to the lockfile and audit | 13 / 14            |
-| Dev credentials in `.env.example`       | Safe only because they are local placeholders and documented | Ongoing            |
-| Access logs include request URLs        | Secrets must never be placed in query strings                | Ongoing            |
+| Gap                                           | Impact                                                                          | Planned phase      |
+| --------------------------------------------- | ------------------------------------------------------------------------------- | ------------------ |
+| No authorization matrix for domain resources  | Middleware matrix exists; resource ownership checks arrive with domain features | 5+                 |
+| No MFA                                        | Account takeover resistance is password-only                                    | Post-Phase 3 spike |
+| No file upload controls                       | Upload features do not exist yet                                                | 6                  |
+| Validation middleware unused by domain routes | No live domain route consumes it yet; covered by tests                          | 5+                 |
+| No domain collections or indexes              | Only auth/RBAC schemas exist; no course data model                              | 5+                 |
+| Redis has no application cache yet            | Client is connected but unused for cache; session state is in MongoDB           | 4 / 13             |
+| Rate limiter uses in-memory store             | Per-process limits; reset on restart; not distributed                           | 3 / 13             |
+| No TLS for MongoDB or Redis                   | Local plaintext connections only                                                | 14                 |
+| No TLS termination                            | Local HTTP only                                                                 | 14                 |
+| No CSP for the SPA                            | API Helmet CSP does not protect the static frontend                             | 14                 |
+| No WAF, bot defense, or DDoS protection       | Hosting-layer concern                                                           | 14                 |
+| No MFA                                        | Account takeover resistance is password-only                                    | Post-Phase 3 spike |
+| No file upload controls                       | Upload features do not exist yet                                                | 6                  |
+| No backups or restore drills                  | No production data exists                                                       | 14 / 15            |
+| No SBOM or provenance attestation             | Supply-chain visibility is limited to the lockfile and audit                    | 13 / 14            |
+| Dev credentials in `.env.example`             | Safe only because they are local placeholders and documented                    | Ongoing            |
+| Access logs include request URLs              | Secrets must never be placed in query strings                                   | Ongoing            |
 
 Additional notes:
 
 - **Rate limiting is not a security boundary.** It reduces abuse; it does not replace authentication, authorization, or input validation.
+- **Readiness discloses dependency state.** The route returns per-dependency status and latency by design. If a deployment considers that sensitive, restrict it at the edge rather than removing the probe.
+- **Validation helpers do not build Mongo filters.** Repositories must still map validated input onto indexed, parameterized queries and never interpolate raw user strings.
+- **Search terms must be escaped.** `shared/query` requires `escapeRegExp()` before a term reaches a regex; skipping it reintroduces regex injection.
 - **Helmet defaults apply to API JSON responses.** The SPA header policy must be configured at its host or reverse proxy in Phase 14.
 - **Development tooling is not hardened.** The Vite dev server and `tsx watch` are for local use only.
 - **The error contract is a floor, not a guarantee.** New endpoints must still avoid leaking sensitive domain information in messages.
@@ -141,20 +176,20 @@ Additional notes:
 
 ### Primary threats and planned mitigations
 
-| Threat                                   | Mitigation direction                                                                                                               |
-| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Credential stuffing / brute force        | Argon2id, strict auth rate limits, progressive lockout, generic failure messages (Phase 3)                                         |
-| Session theft                            | Access token in memory, rotating refresh token in `HttpOnly`/`Secure`/`SameSite` cookie, hashed at rest, reuse detection (Phase 3) |
-| CSRF                                     | `SameSite` plus Origin/Referer validation on cookie-authenticated mutations (Phase 3)                                              |
-| Broken object-level authorization (IDOR) | Server-side permission middleware plus ownership checks in services; 401/403/404 matrix tests (Phase 3, 13)                        |
-| Privilege escalation                     | Permission codes, super-admin-only role assignment, audit logs, no role-string checks in business code (Phase 3–5)                 |
-| Injection                                | Zod validation, Mongoose parameterization, no string-built queries, sanitized rich text (Phase 2+)                                 |
-| XSS                                      | React escaping by default, no `dangerouslySetInnerHTML` without sanitization, CSP at deployment (Phase 7, 14)                      |
-| Malicious uploads                        | Content-type/signature validation, size limits, generated names, private storage, authorized delivery (Phase 6+)                   |
-| Enumeration                              | Non-guessable certificate IDs, uniform responses, rate limits (Phase 11)                                                           |
-| Assessment cheating                      | Server-authoritative timers, attempt limits, idempotent submission, no pre-submit answer exposure (Phase 10)                       |
-| Data exfiltration via logs               | Redaction, no payload logging, PII minimization, retention policy (Phase 13)                                                       |
-| Dependency compromise                    | Exact pins, lockfile review, audit, minimal dependency surface (Ongoing)                                                           |
+| Threat                                   | Mitigation direction                                                                                                                        |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Credential stuffing / brute force        | Argon2id, strict auth rate limits, progressive lockout, generic failure messages (Phase 3)                                                  |
+| Session theft                            | Access token in memory, rotating refresh token in `HttpOnly`/`Secure`/`SameSite` cookie, hashed at rest, reuse detection (Phase 3)          |
+| CSRF                                     | `SameSite` plus Origin/Referer validation on cookie-authenticated mutations (Phase 3)                                                       |
+| Broken object-level authorization (IDOR) | Server-side permission middleware plus ownership checks in services; 401/403/404 matrix tests (Phase 3, 13)                                 |
+| Privilege escalation                     | Permission codes, super-admin-only role assignment, audit logs, no role-string checks in business code (Phase 3–5)                          |
+| Injection                                | Zod validation, Mongoose parameterization, allowlisted sorts, escaped search terms, no string-built queries, sanitized rich text (Phase 2+) |
+| XSS                                      | React escaping by default, no `dangerouslySetInnerHTML` without sanitization, CSP at deployment (Phase 7, 14)                               |
+| Malicious uploads                        | Content-type/signature validation, size limits, generated names, private storage, authorized delivery (Phase 6+)                            |
+| Enumeration                              | Non-guessable certificate IDs, uniform responses, rate limits (Phase 11)                                                                    |
+| Assessment cheating                      | Server-authoritative timers, attempt limits, idempotent submission, no pre-submit answer exposure (Phase 10)                                |
+| Data exfiltration via logs               | Redaction, no payload logging, PII minimization, retention policy (Phase 13)                                                                |
+| Dependency compromise                    | Exact pins, lockfile review, audit, minimal dependency surface (Ongoing)                                                                    |
 
 Detailed architecture and trust boundaries: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
@@ -246,6 +281,7 @@ No production incident process exists yet because no production deployment exist
 
 ## 11. Change log
 
-| Date       | Change                                                            |
-| ---------- | ----------------------------------------------------------------- |
-| 2026-11-24 | Phase 1 security policy: controls, gaps, threat model, checklist. |
+| Date       | Change                                                                             |
+| ---------- | ---------------------------------------------------------------------------------- |
+| 2026-11-24 | Phase 2 security policy: data-layer controls, readiness, validation, revised gaps. |
+| 2026-11-24 | Phase 1 security policy: controls, gaps, threat model, checklist.                  |

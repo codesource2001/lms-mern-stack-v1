@@ -16,7 +16,7 @@ export function SiteFooter() {
             © {year} {env.VITE_APP_NAME}. All rights reserved.
           </p>
           <p className="mt-1 text-xs">
-            Phase 1 complete · Documentation lives in PLAN.md, AGENTS.md, and SECURITY.md.
+            Phase 2 complete — Documentation lives in PLAN.md, AGENTS.md, and SECURITY.md.
           </p>
         </div>
       </div>

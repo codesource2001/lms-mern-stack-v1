@@ -1,7 +1,13 @@
 import { Router } from 'express';
 
-import { getHealth } from './health.controller.js';
+import type { ReadinessReport } from '../../infrastructure/types.js';
+import { createReadinessHandler, getHealth } from './health.controller.js';
 
-export const healthRouter = Router();
+export function createHealthRouter(readinessCheck: () => Promise<ReadinessReport>): Router {
+  const router = Router();
 
-healthRouter.get('/', getHealth);
+  router.get('/', getHealth);
+  router.get('/ready', createReadinessHandler(readinessCheck));
+
+  return router;
+}

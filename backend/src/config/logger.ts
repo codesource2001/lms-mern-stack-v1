@@ -8,10 +8,22 @@ const redactPaths = [
   'res.headers["set-cookie"]',
   'password',
   '*.password',
+  'currentPassword',
+  '*.currentPassword',
+  'newPassword',
+  '*.newPassword',
+  'passwordHash',
+  '*.passwordHash',
   'token',
   '*.token',
+  'tokenHash',
+  '*.tokenHash',
+  'accessToken',
+  '*.accessToken',
   'refreshToken',
   '*.refreshToken',
+  'refreshTokenHash',
+  '*.refreshTokenHash',
 ];
 
 export const logger = pino({

@@ -1,13 +1,13 @@
-import { Circle, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 
 import { Card } from '@/components/ui/card';
 
 const foundationChecks = [
-  { label: 'React 19 + Vite 8 interface shell', status: 'verified' },
-  { label: 'Express 5 API foundation', status: 'verified' },
-  { label: 'Strict TypeScript, ESLint, Prettier', status: 'verified' },
-  { label: 'Vitest + Supertest smoke suites', status: 'verified' },
-  { label: 'MongoDB 8.3 + Redis 8.12 compose stack', status: 'provisioned' },
+  'React 19 + Vite 8 interface shell',
+  'Express 5 API + validation layer',
+  'MongoDB 8.3 + Redis 8.12 connected',
+  'Readiness, retries, graceful shutdown',
+  'Zod-first OpenAPI + Swagger UI',
 ] as const;
 
 export function FoundationCard() {
@@ -22,27 +22,20 @@ export function FoundationCard() {
           <div className="flex items-center justify-between gap-4">
             <p className="font-display text-base font-medium">Foundation checklist</p>
             <span className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[10px] font-semibold tracking-[0.14em] text-background/70 uppercase">
-              Phase 1
+              Phase 2
             </span>
           </div>
-          <p className="mt-1 text-sm text-background/60">Verified against the local toolchain</p>
+          <p className="mt-1 text-sm text-background/60">Verified against local services</p>
         </div>
 
         <ul className="divide-y divide-white/10 px-6 sm:px-7">
           {foundationChecks.map((item) => (
-            <li key={item.label} className="flex items-center justify-between gap-4 py-3.5">
-              <span className="text-sm text-background/85">{item.label}</span>
-              {item.status === 'verified' ? (
-                <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-amber">
-                  <Check className="size-3.5" aria-hidden="true" />
-                  Verified
-                </span>
-              ) : (
-                <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-background/50">
-                  <Circle className="size-2.5" aria-hidden="true" />
-                  Provisioned
-                </span>
-              )}
+            <li key={item} className="flex items-center justify-between gap-4 py-3.5">
+              <span className="text-sm text-background/85">{item}</span>
+              <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-amber">
+                <Check className="size-3.5" aria-hidden="true" />
+                Verified
+              </span>
             </li>
           ))}
         </ul>
@@ -50,12 +43,12 @@ export function FoundationCard() {
         <div className="border-t border-white/10 px-6 py-5 sm:px-7">
           <div className="flex items-center justify-between text-xs text-background/60">
             <span>Delivery progress</span>
-            <span className="font-mono">1 / 15 phases</span>
+            <span className="font-mono">2 / 15 phases</span>
           </div>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-            <div className="h-full w-[6.7%] rounded-full bg-amber" />
+            <div className="h-full w-[13.3%] rounded-full bg-amber" />
           </div>
-          <p className="mt-3 text-xs text-background/55">Next: database and backend foundation.</p>
+          <p className="mt-3 text-xs text-background/55">Next: authentication and RBAC.</p>
         </div>
       </Card>
     </div>

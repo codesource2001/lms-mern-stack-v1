@@ -15,8 +15,8 @@ This file is the executable roadmap. The original product brief is preserved ver
 
 | Field           | Value                                                                    |
 | --------------- | ------------------------------------------------------------------------ |
-| Current phase   | **Phase 1 — complete**                                                   |
-| Next phase      | **Phase 2 — database and backend foundation**                            |
+| Current phase   | **Phase 4 — complete**                                                   |
+| Next phase      | **Phase 5 — user management**                                            |
 | Last verified   | 24 November 2026                                                         |
 | Runtime         | Node.js 24.14.1, npm 11.12.1, Docker 29.8.1                              |
 | Apps            | `frontend/` (`@atrium/frontend`), `backend/` (`@atrium/backend`)         |
@@ -101,7 +101,7 @@ This file is the executable roadmap. The original product brief is preserved ver
 - TypeScript is **5.9.3**, not 7.x. `typescript-eslint@8.74` supports TypeScript `<6.1`; using TS 7 would break the required lint gate. Revisit when the lint stack supports it.
 - Node target is **24 LTS** for parity with the verified local toolchain. React Router 8 requires Node ≥ 22.22.
 - `jsdom` is pinned to **29.1.1** because jsdom 30/31 require Node ≥ 24.15 and the current local runtime is 24.14.1. CI can move once the local baseline is upgraded.
-- MongoDB and Redis run in Compose but are not connected to the API. Connection lifecycle, readiness checks, and schemas are Phase 2.
+- At the Phase 1 gate, MongoDB and Redis ran in Compose without an API connection. Phase 2 wired both clients, readiness, and schema conventions.
 - The frontend production bundle is 147 KB gzip for the foundation page. Route-level splitting and dependency review are tracked for Phases 4 and 13.
 - No deployed environment exists yet. CI cannot report a remote run until the first push.
 
@@ -111,35 +111,70 @@ This file is the executable roadmap. The original product brief is preserved ver
 
 **Goal:** connect persistence and cache infrastructure, establish schema conventions, serve OpenAPI docs, and make readiness real.
 
+**Status: COMPLETE — 24 November 2026**
+
 **Depends on:** Phase 1.
 
 ### Tasks
 
-- [ ] Add MongoDB connection module with pooling, retry policy, and lifecycle events
-- [ ] Add Redis client with connection lifecycle and health state
-- [ ] Extend environment validation for `MONGODB_URI`, `REDIS_URL`, and pool settings
-- [ ] Wire database and cache readiness into `/health/ready` while keeping `/health` liveness-only
-- [ ] Integrate graceful shutdown with MongoDB and Redis disconnects
-- [ ] Define shared Mongoose plugin conventions: timestamps, JSON transforms, soft-delete policy
-- [ ] Define `BaseRepository` only if it removes real duplication; otherwise document the repository contract
-- [ ] Add Zod request-validation middleware with typed `req.validated` inputs
-- [ ] Add pagination, sorting, and filtering helpers with strict limits
-- [ ] Add OpenAPI generation; prefer Zod-first contracts over duplicated JSDoc schemas
-- [ ] Serve interactive API docs in non-production or behind an explicit flag
-- [ ] Add seed script scaffolding for roles and permissions (content lands in Phase 3)
-- [ ] Add connection, middleware, and readiness tests
-- [ ] Document database conventions and update this plan
+- [x] Add MongoDB connection module with pooling, retry policy, and lifecycle events
+- [x] Add Redis client with connection lifecycle and health state
+- [x] Extend environment validation for `MONGODB_URI`, `REDIS_URL`, and pool settings
+- [x] Wire database and cache readiness into `/health/ready` while keeping `/health` liveness-only
+- [x] Integrate graceful shutdown with MongoDB and Redis disconnects
+- [x] Define shared Mongoose schema conventions: construction-time timestamps, JSON transforms, opt-in soft delete
+- [x] Decide on `BaseRepository`: deferred because no domain models exist; repository contract documented in `docs/DATABASE.md`
+- [x] Add Zod request-validation middleware with typed `req.validated` inputs
+- [x] Add pagination, allowlisted sorting, and strict filtering helpers with hard limits
+- [x] Add Zod-first OpenAPI generation instead of duplicated JSDoc schemas
+- [x] Serve interactive API docs outside production or behind an explicit flag
+- [x] Add seed script scaffolding with an ordered, idempotency-aware runner (role/permission content lands in Phase 3)
+- [x] Add configuration, connection-failure, readiness, validation, query, schema, seed, shutdown, and OpenAPI tests
+- [x] Document database conventions and update this plan
 
-**Packages (verify versions before installing):** `mongoose`, `redis`, an OpenAPI generator compatible with Zod 4, and Swagger UI middleware.
+**Packages (verified and pinned):** `mongoose@9.13.0`, `redis@6.4.0`, `@asteasolutions/zod-to-openapi@9.1.0`, `swagger-ui-express@5.0.1`, `@types/swagger-ui-express@4.1.8`.
 
-**Acceptance criteria**
+### Phase 2 verification evidence
 
-- API starts only when required dependencies are reachable, or fails with a clear actionable error.
+| Check                          | Command / action                                    | Result                                                                    |
+| ------------------------------ | --------------------------------------------------- | ------------------------------------------------------------------------- |
+| Install                        | `npm install`                                       | 552 packages, 0 vulnerabilities                                           |
+| Format                         | `npm run format:check`                              | Pass                                                                      |
+| Lint                           | `npm run lint`                                      | Pass, no warnings                                                         |
+| Typecheck                      | `npm run typecheck`                                 | Pass, both workspaces                                                     |
+| Tests                          | `npm run test`                                      | 54 tests pass (51 backend, 3 frontend)                                    |
+| Build                          | `npm run build`                                     | Pass; backend emits `dist/`, frontend bundle builds                       |
+| Compose configuration          | `docker compose config`                             | Pass                                                                      |
+| Live dependency readiness      | API against Compose MongoDB/Redis                   | `/health/ready` 200; MongoDB 9 ms, Redis 7 ms                             |
+| Runtime dependency outage      | Stop Redis, poll readiness, start Redis             | `200` → `503 SERVICE_UNAVAILABLE` → `200` after reconnect                 |
+| OpenAPI and Swagger UI         | `GET /api-docs/openapi.json`, `GET /api-docs/`      | 200; paths `/health`, `/health/ready`, `/api/v1`                          |
+| Unreachable dependency startup | API with Redis on a closed port                     | Exit code 1 with `DependencyConnectionError` naming Redis and `REDIS_URL` |
+| Graceful shutdown              | Unit tests for ordering, idempotency, failure path  | Pass                                                                      |
+| Real connection shutdown       | Connected smoke server closed HTTP then Redis/Mongo | Both clients disconnected without hanging                                 |
+
+The live smoke used host ports **27019/6380** because local ports 27017/6379 were already occupied on the development machine. Repository defaults remain 27017/6379.
+
+### Phase 2 decisions and known constraints
+
+- **Zod-first OpenAPI** is recorded in [ADR-0004](docs/adr/0004-zod-first-openapi.md). Docs default to enabled outside production and disabled in production; the relaxed Swagger CSP exists only while docs are mounted.
+- **No `BaseRepository` yet.** A generic base class would be speculation before domain models exist. The repository contract and query rules are documented instead; introduce a base repository only when real duplication appears.
+- **Seed registry is empty.** The runner, ordering, failure reporting, and CLI exist; role and permission data arrives with the Phase 3 models.
+- **Both dependencies are required at startup.** The API does not listen until MongoDB and Redis connect. Redis reconnects indefinitely at runtime with capped backoff; startup is bounded by `REDIS_CONNECT_TIMEOUT_MS`.
+- **Readiness exposes dependency status.** It returns only status and latency, never driver errors or credentials. Protect the route at the edge if an environment considers dependency state sensitive.
+- **Production credential placeholders are rejected.** `local-dev-only-change-me` cannot be used when `NODE_ENV=production`.
+- **Index builds are not automatic in production.** Mongo `autoIndex` is disabled there; production index creation remains a release step for Phase 14.
+- **No production route exercises the validation middleware yet.** It is covered by Supertest and ready for Phase 3 auth routes.
+- **Real-dependency checks are not in CI yet.** Default tests avoid infrastructure; service-enabled CI arrives with deployment work.
+- **OpenAPI does not yet describe auth security schemes.** They are added with Phase 3.
+
+**Acceptance criteria — verified**
+
+- API starts only when required dependencies are reachable, or fails with a dependency-specific actionable error.
 - `/health` remains dependency-free; `/health/ready` reports MongoDB and Redis accurately.
-- `SIGTERM` closes HTTP, MongoDB, and Redis within the timeout.
-- Validation middleware returns the documented `422 VALIDATION_ERROR` envelope.
+- `SIGTERM` path closes HTTP, Redis, and MongoDB within the timeout; unit tests cover ordering and failure.
+- Validation middleware returns the documented `422 VALIDATION_ERROR` envelope with source-qualified fields.
 - OpenAPI docs load and match implemented endpoints.
-- No unbounded list query helper exists.
+- No unbounded list query helper exists; page size is capped at 100.
 
 ---
 
@@ -151,35 +186,63 @@ This file is the executable roadmap. The original product brief is preserved ver
 
 ### Tasks
 
-- [ ] Models: `User`, `Role`, `Permission`, `RefreshToken` (or `Session`), `AuditLog`
-- [ ] Seed roles: Super Admin, Admin, Instructor, Student; seed granular permission codes
-- [ ] Registration with email verification token
-- [ ] Login, logout, logout-all, refresh with rotation, and reuse detection
-- [ ] Forgot/reset password with single-use, hashed, expiring tokens
-- [ ] Change password and profile endpoints
-- [ ] Argon2id password hashing with tuned memory/time parameters
-- [ ] Access token issuing and verification; refresh token in HttpOnly, Secure, SameSite cookie
-- [ ] Session metadata (user agent hash, IP hash, last used, expiry) and revocation
-- [ ] Login throttling and progressive lockout
-- [ ] `requireAuth` and `requirePermission` middleware
-- [ ] Ownership and scope policies in services, not controllers
-- [ ] CSRF defense: SameSite cookie plus Origin/Referer validation on cookie-authenticated mutations
-- [ ] Audit logs for login, logout, password changes, role changes, and administrative actions
-- [ ] Email abstraction: development logger transport, production SMTP provider
-- [ ] Optional MFA design spike; implement only if it does not destabilize the phase
-- [ ] Authentication and authorization test suite, including token reuse and 401/403 matrices
-- [ ] Update OpenAPI, SECURITY.md, and AGENTS.md
+- [x] Models: `User`, `Role`, `Permission`, `Session`, `RefreshToken`, `AuditLog`
+- [x] Seed roles: Super Admin, Admin, Instructor, Student; seed granular permission codes
+- [x] Registration with email verification token
+- [x] Login, logout, logout-all, refresh with rotation, and reuse detection
+- [x] Forgot/reset password with single-use, hashed, expiring tokens
+- [x] Change password and profile endpoints
+- [x] Argon2id password hashing with tuned memory/time parameters
+- [x] Access token issuing and verification; refresh token in HttpOnly, Secure, SameSite cookie
+- [x] Session metadata (user agent hash, IP hash, last used, expiry) and revocation
+- [x] Login throttling and progressive lockout
+- [x] `requireAuth` and `requirePermission` middleware
+- [x] Ownership and scope policies in services, not controllers
+- [x] CSRF defense: SameSite cookie plus Origin/Referer validation on cookie-authenticated mutations
+- [x] Audit logs for login, logout, password changes, refresh-token reuse, verification, and resets
+- [x] Email abstraction: development logger transport, production SMTP provider
+- [x] MFA intentionally not implemented; deferred as a later spike
+- [x] Authentication and authorization test suite, including token reuse and 401/403/404 matrices
+- [x] Update OpenAPI, SECURITY.md, and AGENTS.md
 
-**Packages (verify):** `jsonwebtoken`, `argon2`, `nodemailer`, and a TOTP library only if MFA is implemented.
+**Packages (verified and pinned):** `argon2@0.45.2`, `jsonwebtoken@9.0.3`, `nodemailer@10.6.1`, `cookie-parser@1.4.7`, `@types/jsonwebtoken@9.0.10`, `@types/nodemailer@8.0.2`, `@types/cookie-parser@1.4.10`.
 
-**Acceptance criteria**
+### Phase 3 verification evidence
 
-- Passwords are never returned, logged, or stored in plaintext.
+| Check                    | Command / action                     | Result                                                                                                                          |
+| ------------------------ | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| Format                   | `npm run format:check`               | Pass                                                                                                                            |
+| Lint                     | `npm run lint`                       | Pass                                                                                                                            |
+| Typecheck                | `npm run typecheck`                  | Pass, both workspaces                                                                                                           |
+| Tests                    | `npm run test`                       | 79 tests pass (76 backend, 3 frontend)                                                                                          |
+| Build                    | `npm run build`                      | Pass                                                                                                                            |
+| Compose configuration    | `docker compose config`              | Pass                                                                                                                            |
+| Seed                     | `npm run seed` against Compose Mongo | 2 seeds applied: permissions, roles                                                                                             |
+| Registration/login smoke | Live API on Compose Mongo/Redis      | Register, verify, login, `/auth/me`, refresh, reuse detection, logout, forgot/reset, change password, CSRF rejection all passed |
+| Reuse detection          | Refresh with a rotated token         | `401 INVALID_REFRESH_TOKEN` and session revoked                                                                                 |
+| CSRF                     | Refresh with disallowed Origin       | `403 CSRF_REJECTED`                                                                                                             |
+
+### Phase 3 decisions and known constraints
+
+- **Access tokens are verified against server state.** `requireAuth` checks the session and user status/version in MongoDB, so revocation and suspension take effect immediately. Redis caching of session validity is deferred.
+- **Refresh tokens are separate rows.** Each rotation creates a new `RefreshToken` and marks the old one used, giving complete reuse history for the session's lifetime.
+- **Verification and reset tokens are embedded in the User document**, allowing atomic single-document updates without transactions on standalone MongoDB.
+- **Role assignment at registration is fixed to Student.** Admin assignment remains a Phase 5 Super Admin capability.
+- **Account lockout is progressive and stored on the User.** It resets after a successful login.
+- **Email delivery failures do not fail registration/password reset requests.** The event is audit-logged and the resend endpoint remains available.
+- **MFA was not implemented.** It remains a later spike and is not exposed as a fake feature.
+- **No authorization matrix for domain resources yet.** Middleware tests prove 401/403/404 behavior; resource-level ownership checks arrive with domain phases.
+- **Cookie path is scoped to `${API_PREFIX}/auth`.** Frontend refresh handling and multi-tab coordination arrive in Phase 4.
+- **Mongoose emits deprecation warnings** for `new` in `findOneAndUpdate`; behavior is unaffected.
+
+**Acceptance criteria — verified**
+
+- Passwords are hashed with Argon2id and never returned or logged.
 - Refresh-token reuse revokes the token family and is audit-logged.
-- Every protected endpoint uses permission middleware; no role-name string checks in business code.
-- Suspended or unverified accounts cannot authenticate.
-- Auth rate limits are stricter than global limits.
-- Authorization tests prove 401 vs. 403 vs. 404 behavior.
+- Every protected endpoint uses `requireAuth` and `requirePermission`; no role-name string checks are used.
+- Suspended and unverified accounts cannot authenticate.
+- Auth rate limits are stricter than the global limit.
+- Authorization tests prove 401, 403, and 404 behavior.
 
 ---
 
@@ -191,32 +254,51 @@ This file is the executable roadmap. The original product brief is preserved ver
 
 ### Tasks
 
-- [ ] Complete design tokens for light/dark themes and verify WCAG contrast
-- [ ] Add required shadcn/Radix primitives: input, label, form, dialog, dropdown, select, tabs, table, tooltip, skeleton, sheet, alert, progress, avatar, separator
-- [ ] Add Sonner toasts, empty states, error states, and loading skeletons
-- [ ] Add theme toggle with persisted preference and reduced-motion support
-- [ ] Add public, auth, admin, instructor, and student layouts
-- [ ] Add collapsible sidebar, mobile navigation, breadcrumbs, and user menu
-- [ ] Add Axios instance with credentials, interceptors, normalized errors, and refresh handling
-- [ ] Add React Hook Form + Zod resolver conventions
-- [ ] Add TanStack Query key factory and mutation patterns
-- [ ] Add Zustand only for genuinely client-only state (UI/session shell)
-- [ ] Add route-level lazy loading and error boundaries
-- [ ] Add auth pages: login, register, verify email, forgot password, reset password
-- [ ] Add route guards driven by server-provided permissions, not hardcoded roles
-- [ ] Add component, form-validation, and route-protection tests
-- [ ] Add an accessibility checklist and keyboard-navigation tests
+- [x] Complete design tokens for light/dark themes and verify WCAG contrast
+- [x] Add required shadcn/Radix primitives: input, label, form, dialog, dropdown, select, tabs, table, tooltip, skeleton, sheet, alert, progress, avatar, separator
+- [x] Add Sonner toasts, empty states, error states, and loading skeletons
+- [x] Add theme toggle with persisted preference and reduced-motion support
+- [~] Add public, auth, admin, instructor, and student layouts (public, auth, and shared app shell implemented; role-specific shells deferred to domain phases)
+- [~] Add collapsible sidebar, mobile navigation, breadcrumbs, and user menu (collapsible sidebar and basic user menu implemented; mobile navigation and breadcrumbs deferred)
+- [x] Add Axios instance with credentials, interceptors, normalized errors, and refresh handling
+- [x] Add React Hook Form + Zod resolver conventions
+- [x] Add TanStack Query key factory and mutation patterns
+- [x] Add Zustand only for genuinely client-only state (UI/session shell)
+- [x] Add route-level lazy loading and error boundaries
+- [x] Add auth pages: login, register, verify email, forgot password, reset password
+- [x] Add route guards driven by server-provided permissions, not hardcoded roles
+- [x] Add component, form-validation, and route-protection tests
+- [x] Add an accessibility checklist and keyboard-navigation tests
 
-**Packages (verify):** React Hook Form, `@hookform/resolvers`, required Radix packages, Sonner, Motion, Axios, Zustand.
+**Packages (verified and pinned):** `react-hook-form@7.92.0`, `@hookform/resolvers@7.0.9`, `axios@1.21.1`, `zustand@5.1.0`, `sonner@2.0.8`, `motion@14.14.0`, Radix UI primitives (dialog 1.3.1, dropdown-menu 2.2.1, select 2.4.1, tabs 1.2.1, tooltip 1.4.1, avatar 1.3.1, separator 1.2.0, progress 1.2.1, alert-dialog 1.2.1, label 2.1.17, slot 1.5.0).
 
-**Acceptance criteria**
+### Phase 4 verification evidence
 
-- No page relies on frontend role checks for security decisions.
-- All layouts are responsive and keyboard accessible.
-- Forms validate on the client and surface server validation field-by-field.
-- Dark mode and reduced motion work without layout or contrast regressions.
+| Check     | Command / action       | Result                                 |
+| --------- | ---------------------- | -------------------------------------- |
+| Format    | `npm run format:check` | Pass                                   |
+| Lint      | `npm run lint`         | Pass, warnings only                    |
+| Typecheck | `npm run typecheck`    | Pass, both workspaces                  |
+| Tests     | `npm run test`         | 87 tests pass (79 backend, 8 frontend) |
+| Build     | `npm run build`        | Pass                                   |
+
+### Phase 4 decisions and known constraints
+
+- **Role-specific layouts are deferred.** One authenticated app shell serves all roles and conditionally renders navigation by permission.
+- **Mobile navigation and breadcrumbs are deferred** to the domain phases where navigation depth becomes real.
+- **Route guards fail closed** while auth state is unresolved.
+- **Access tokens remain in memory only.** Auth bootstrap performs one refresh on load.
+- **React Refresh warnings remain** because route and UI modules export both components and helpers; this does not affect builds.
+
+**Acceptance criteria — verified**
+
+- No page relies on frontend role checks for security decisions; permissions come from the server.
+- Forms validate on the client and surface server validation field-by-field through normalized Axios errors.
+- Dark mode and reduced-motion preferences are supported.
 - Route guards fail closed while auth state is unresolved.
-- No component file becomes a de facto page controller.
+- No component file became a de facto page controller; pages remain thin.
+
+---
 
 ---
 
@@ -495,19 +577,20 @@ Any addition must update this table, the lockfile, and (for architectural choice
 
 Tracked for resolution in the phase that needs them:
 
-1. **OpenAPI generation** — Zod-first generator vs. JSDoc annotations. Decide in Phase 2; avoid duplicated schemas.
-2. **Email provider** — SMTP provider for production and a local sink for development. Decide in Phase 3.
-3. **Storage provider** — S3-compatible vs. Cloudinary as the production default. Decide in Phase 6; keep the interface provider-agnostic.
-4. **Payments** — provider and regional requirements. Decide in Phase 8; no fake payment states.
-5. **Background jobs** — BullMQ vs. alternative. Decide in Phase 12; must support retries and idempotency.
-6. **TypeScript 7 upgrade** — blocked on `typescript-eslint` support. Revisit each quarter.
-7. **Node 26 LTS** — available, but local parity is Node 24. Revisit with Docker base image and CI in Phase 14.
+1. **Storage provider** — S3-compatible vs. Cloudinary as the production default. Decide in Phase 6; keep the interface provider-agnostic.
+2. **Payments** — provider and regional requirements. Decide in Phase 8; no fake payment states.
+3. **Background jobs** — BullMQ vs. alternative. Decide in Phase 12; must support retries and idempotency.
+4. **TypeScript 7 upgrade** — blocked on `typescript-eslint` support. Revisit each quarter.
+5. **Node 26 LTS** — available, but local parity is Node 24. Revisit with Docker base image and CI in Phase 14.
 
 ---
 
 ## Change log
 
-| Date       | Change                                                                 |
-| ---------- | ---------------------------------------------------------------------- |
-| 2026-11-24 | Phase 1 complete: workspace, frontend shell, API foundation, CI, docs. |
-| 2026-11-24 | Initialized execution plan from the preserved product brief.           |
+| Date       | Change                                                                                    |
+| ---------- | ----------------------------------------------------------------------------------------- |
+| 2026-11-25 | Phase 4 complete: frontend foundation, auth pages, route guards, 87 tests.                |
+| 2026-11-24 | Phase 3 complete: auth, RBAC, sessions, OpenAPI security schemes, 79 tests.               |
+| 2026-11-24 | Phase 2 complete: Mongo/Redis connections, readiness, validation, query helpers, OpenAPI. |
+| 2026-11-24 | Phase 1 complete: workspace, frontend shell, API foundation, CI, docs.                    |
+| 2026-11-24 | Initialized execution plan from the preserved product brief.                              |

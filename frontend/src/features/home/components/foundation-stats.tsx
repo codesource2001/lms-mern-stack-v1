@@ -2,7 +2,7 @@ const foundationStats = [
   { label: 'Runtime', value: 'Node 24 LTS' },
   { label: 'Language', value: 'TypeScript 5.9' },
   { label: 'Interface', value: 'React 19.3' },
-  { label: 'API', value: 'Express 5.3' },
+  { label: 'Data', value: 'MongoDB + Redis' },
 ];
 
 export function FoundationStats() {

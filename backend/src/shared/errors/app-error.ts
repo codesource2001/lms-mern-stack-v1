@@ -8,6 +8,7 @@ export interface AppErrorOptions {
   statusCode: number;
   code: string;
   details?: FieldError[];
+  context?: Record<string, unknown>;
   cause?: unknown;
 }
 
@@ -15,6 +16,7 @@ export class AppError extends Error {
   readonly statusCode: number;
   readonly code: string;
   readonly details?: FieldError[];
+  readonly context?: Record<string, unknown>;
   readonly isOperational = true;
 
   constructor(message: string, options: AppErrorOptions) {
@@ -25,6 +27,10 @@ export class AppError extends Error {
 
     if (options.details !== undefined) {
       this.details = options.details;
+    }
+
+    if (options.context !== undefined) {
+      this.context = options.context;
     }
 
     Error.captureStackTrace?.(this, new.target);

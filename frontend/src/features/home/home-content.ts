@@ -18,13 +18,13 @@ export const roadmapPhases: RoadmapPhase[] = [
     number: 2,
     title: 'Database & backend foundation',
     summary: 'MongoDB, Redis, shared middleware, OpenAPI, and health readiness.',
-    status: 'next',
+    status: 'complete',
   },
   {
     number: 3,
     title: 'Authentication & RBAC',
     summary: 'Sessions, token rotation, permissions, and audit logging.',
-    status: 'planned',
+    status: 'next',
   },
   {
     number: 4,
@@ -114,7 +114,14 @@ export const stackGroups = [
   },
   {
     title: 'API',
-    items: ['Node.js 24 LTS', 'Express 5.3', 'TypeScript 5.9', 'Pino 10', 'Helmet 8', 'Zod 4'],
+    items: [
+      'Node.js 24 LTS',
+      'Express 5.3',
+      'TypeScript 5.9',
+      'Mongoose 9',
+      'Redis 6',
+      'OpenAPI 3.1',
+    ],
   },
   {
     title: 'Quality',
@@ -123,10 +130,10 @@ export const stackGroups = [
   {
     title: 'Local infrastructure',
     items: [
-      'MongoDB 8.3 · provisioned',
-      'Redis 8.12 · provisioned',
+      'MongoDB 8.3 · connected',
+      'Redis 8.12 · connected',
       'Docker Compose',
-      'Health checks',
+      'Readiness checks',
     ],
   },
 ] as const;

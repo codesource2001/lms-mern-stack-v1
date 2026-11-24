@@ -13,7 +13,7 @@ describe('HomePage', () => {
         name: /learning infrastructure with product craft/i,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/phase 1 of 15/i)).toBeInTheDocument();
+    expect(screen.getByText(/phase 2 of 15/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /read the roadmap/i })).toHaveAttribute(
       'href',
       '#roadmap',
@@ -24,6 +24,7 @@ describe('HomePage', () => {
     render(<HomePage />);
 
     expect(screen.getByText('Database & backend foundation')).toBeInTheDocument();
+    expect(screen.getByText('Authentication & RBAC')).toBeInTheDocument();
     expect(screen.getAllByText('Next').length).toBeGreaterThan(0);
   });
 });

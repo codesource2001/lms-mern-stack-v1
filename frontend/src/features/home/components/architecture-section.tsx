@@ -15,14 +15,14 @@ const pillars = [
     title: 'API',
     description:
       'Express 5 in a layered modular monolith. Routes stay thin, services own business rules, and repositories own persistence.',
-    note: 'Zod at the edge · centralized errors · deny-by-default access',
+    note: 'Zod at the edge · centralized errors · authorization in Phase 3',
   },
   {
     icon: Database,
     title: 'Data',
     description:
-      'MongoDB 8.3 and Redis 8.12 are provisioned locally. Schema design, compound indexes, transactions, and cache boundaries start in Phase 2.',
-    note: 'Indexed queries · duplicate-safe enrollment · graceful shutdown',
+      'MongoDB 8.3 and Redis 8.12 are connected through pooled clients with retry, readiness, and shutdown handling. Domain schemas and cache boundaries are added with their features.',
+    note: 'Bounded queries · schema conventions · graceful shutdown',
   },
 ];
 
@@ -85,8 +85,8 @@ export function ArchitectureSection() {
             ))}
           </div>
           <p className="border-t border-border px-5 py-4 text-sm leading-relaxed text-muted-foreground">
-            Phase 1 implements the application shell, response envelope, and centralized error
-            boundary. Persistence and access control land in Phases 2–3.
+            Phase 2 implements persistence wiring, request validation, and generated OpenAPI docs.
+            Authentication and access control land in Phase 3.
           </p>
         </Card>
       </div>
