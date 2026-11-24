@@ -7,6 +7,7 @@ import { z } from 'zod';
 
 import { env } from '../config/env.js';
 import { registerAuthOpenApi } from '../modules/auth/auth.openapi.js';
+import { registerUserOpenApi } from '../modules/users/user.openapi.js';
 
 extendZodWithOpenApi(z);
 
@@ -132,6 +133,7 @@ registry.registerPath({
 });
 
 registerAuthOpenApi(registry);
+registerUserOpenApi(registry);
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
@@ -148,5 +150,6 @@ export const openApiDocument = generator.generateDocument({
     { name: 'Operations', description: 'Liveness, readiness, and service metadata' },
     { name: 'Discovery', description: 'API discovery metadata' },
     { name: 'Authentication', description: 'Account lifecycle and session management' },
+    { name: 'Users', description: 'User management' },
   ],
 });

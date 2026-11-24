@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 
+import { escapeRegExp } from '../../shared/query/filtering.js';
 import { UserModel, type UserDocument } from './user.model.js';
 
 export interface UserRecord {
@@ -15,6 +16,9 @@ export interface UserRecord {
   lockoutLevel: number;
   lockUntil: Date | null;
   tokenVersion: number;
+  instructorApplicationStatus: 'none' | 'pending' | 'approved' | 'rejected';
+  deletedAt: Date | null;
+  deletedBy: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -313,6 +317,120 @@ export class UserRepository {
     return document === null ? null : toUserRecordFromLean(document);
   }
 
+  async list(input: {
+    page: number;
+    limit: number;
+    sortField: 'createdAt' | 'name' | 'email' | 'status';
+    sortDirection: 'asc' | 'desc';
+    status?: 'pending_verification' | 'active' | 'suspended' | undefined;
+    roleId?: string | undefined;
+    applicationStatus?: 'none' | 'pending' | 'approved' | 'rejected' | undefined;
+    search?: string | undefined;
+    includeDeleted?: boolean | undefined;
+  }): Promise<{ items: UserRecord[]; total: number }> {
+    const filter: Record<string, unknown> = {};
+
+    if (input.includeDeleted !== true) {
+      filter.deletedAt = null;
+    }
+
+    if (input.status !== undefined) {
+      filter.status = input.status;
+    }
+
+    if (input.roleId !== undefined) {
+      filter.roles = new Types.ObjectId(input.roleId);
+    }
+
+    if (input.applicationStatus !== undefined) {
+      filter.instructorApplicationStatus = input.applicationStatus;
+    }
+
+    if (input.search !== undefined && input.search.trim() !== '') {
+      const regex = new RegExp(escapeRegExp(input.search.trim()), 'i');
+      filter.$or = [{ name: regex }, { email: regex }];
+    }
+
+    const sort: Record<string, 1 | -1> = {
+      [input.sortField]: input.sortDirection === 'asc' ? 1 : -1,
+    };
+
+    const [documents, total] = await Promise.all([
+      UserModel.find(filter)
+        .sort(sort)
+        .skip((input.page - 1) * input.limit)
+        .limit(input.limit)
+        .lean(),
+      UserModel.countDocuments(filter),
+    ]);
+
+    return {
+      items: (documents as UserLean[]).map(toUserRecordFromLean),
+      total,
+    };
+  }
+
+  async update(
+    id: string,
+    input: {
+      name?: string;
+      email?: string;
+      status?: 'pending_verification' | 'active' | 'suspended';
+      roleIds?: string[];
+      instructorApplicationStatus?: 'none' | 'pending' | 'approved' | 'rejected';
+    },
+  ): Promise<UserRecord | null> {
+    const update: Record<string, unknown> = {};
+
+    if (input.name !== undefined) {
+      update.name = input.name;
+    }
+
+    if (input.email !== undefined) {
+      update.email = input.email.toLowerCase().trim();
+    }
+
+    if (input.status !== undefined) {
+      update.status = input.status;
+    }
+
+    if (input.roleIds !== undefined) {
+      update.roles = input.roleIds.map((roleId) => new Types.ObjectId(roleId));
+    }
+
+    if (input.instructorApplicationStatus !== undefined) {
+      update.instructorApplicationStatus = input.instructorApplicationStatus;
+    }
+
+    const document = await UserModel.findByIdAndUpdate(
+      id,
+      { $set: update },
+      { runValidators: true, returnDocument: 'after' },
+    ).lean();
+
+    return document === null ? null : toUserRecordFromLean(document);
+  }
+
+  async softDelete(id: string, deletedBy: string, now: Date): Promise<UserRecord | null> {
+    const document = await UserModel.findOneAndUpdate(
+      { _id: id, deletedAt: null },
+      { $set: { deletedAt: now, deletedBy: new Types.ObjectId(deletedBy), status: 'suspended' } },
+      { returnDocument: 'after' },
+    ).lean();
+
+    return document === null ? null : toUserRecordFromLean(document);
+  }
+
+  async restore(id: string): Promise<UserRecord | null> {
+    const document = await UserModel.findByIdAndUpdate(
+      id,
+      { $set: { deletedAt: null, deletedBy: null } },
+      { returnDocument: 'after' },
+    ).lean();
+
+    return document === null ? null : toUserRecordFromLean(document);
+  }
+
   async incrementTokenVersion(id: string): Promise<void> {
     await UserModel.updateOne({ _id: id }, { $inc: { tokenVersion: 1 } });
   }
@@ -332,6 +450,9 @@ function toUserRecord(document: UserDocument & { _id: Types.ObjectId }): UserRec
     lockoutLevel: document.lockoutLevel,
     lockUntil: document.lockUntil ?? null,
     tokenVersion: document.tokenVersion,
+    instructorApplicationStatus: document.instructorApplicationStatus,
+    deletedAt: document.deletedAt ?? null,
+    deletedBy: document.deletedBy?.toString() ?? null,
     createdAt: document.createdAt,
     updatedAt: document.updatedAt,
   };
@@ -350,6 +471,9 @@ interface UserLean {
   lockoutLevel: number;
   lockUntil?: Date | null;
   tokenVersion: number;
+  instructorApplicationStatus: 'none' | 'pending' | 'approved' | 'rejected';
+  deletedAt?: Date | null;
+  deletedBy?: Types.ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -368,6 +492,9 @@ function toUserRecordFromLean(document: UserLean): UserRecord {
     lockoutLevel: document.lockoutLevel,
     lockUntil: document.lockUntil ?? null,
     tokenVersion: document.tokenVersion,
+    instructorApplicationStatus: document.instructorApplicationStatus,
+    deletedAt: document.deletedAt ?? null,
+    deletedBy: document.deletedBy?.toString() ?? null,
     createdAt: document.createdAt,
     updatedAt: document.updatedAt,
   };

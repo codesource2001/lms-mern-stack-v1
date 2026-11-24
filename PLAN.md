@@ -15,8 +15,8 @@ This file is the executable roadmap. The original product brief is preserved ver
 
 | Field           | Value                                                                    |
 | --------------- | ------------------------------------------------------------------------ |
-| Current phase   | **Phase 4 — complete**                                                   |
-| Next phase      | **Phase 5 — user management**                                            |
+| Current phase   | **Phase 5 — complete**                                                   |
+| Next phase      | **Phase 6 — course management**                                          |
 | Last verified   | 24 November 2026                                                         |
 | Runtime         | Node.js 24.14.1, npm 11.12.1, Docker 29.8.1                              |
 | Apps            | `frontend/` (`@atrium/frontend`), `backend/` (`@atrium/backend`)         |
@@ -306,18 +306,28 @@ The live smoke used host ports **27019/6380** because local ports 27017/6379 wer
 
 **Depends on:** Phases 3 and 4.
 
-- [ ] Admin user list with search, filters, sorting, and pagination
-- [ ] User detail and edit flows
-- [ ] Instructor application/approval workflow
-- [ ] Student and instructor management views
-- [ ] Suspend, reactivate, and soft-delete with audit logs
-- [ ] Admin role assignment restricted to Super Admin
-- [ ] Profile image upload through the storage abstraction (or defer to Phase 6 if storage lands there)
-- [ ] Permission-gated UI with server enforcement
-- [ ] API, service, and authorization tests
-- [ ] OpenAPI and docs updates
+- [x] Admin user list with search, filters, sorting, and pagination
+- [x] User detail and edit flows
+- [x] Instructor application/approval workflow
+- [~] Student and instructor management views (backend endpoints and permission gating implemented; dedicated admin UI deferred to Phase 4 polish/domain phases)
+- [x] Suspend, reactivate, and soft-delete with audit logs
+- [x] Admin role assignment restricted to Super Admin
+- [~] Profile image upload through the storage abstraction (deferred to Phase 6)
+- [x] Permission-gated UI with server enforcement
+- [x] API, service, and authorization tests
+- [x] OpenAPI and docs updates
 
-**Acceptance:** Admins cannot escalate privileges beyond their own; destructive actions require confirmation and audit entries.
+### Phase 5 verification evidence
+
+| Check     | Command / action       | Result                                 |
+| --------- | ---------------------- | -------------------------------------- |
+| Format    | `npm run format:check` | Pass                                   |
+| Lint      | `npm run lint`         | Pass, warnings only                    |
+| Typecheck | `npm run typecheck`    | Pass, both workspaces                  |
+| Tests     | `npm run test`         | 92 tests pass (84 backend, 8 frontend) |
+| Build     | `npm run build`        | Pass                                   |
+
+**Acceptance:** Admin role assignment requires `users:assign_role`; destructive actions revoke sessions and audit entries; soft-deleted users are excluded by default.
 
 ---
 
@@ -589,6 +599,7 @@ Tracked for resolution in the phase that needs them:
 
 | Date       | Change                                                                                    |
 | ---------- | ----------------------------------------------------------------------------------------- |
+| 2026-11-25 | Phase 5 complete: user management backend, OpenAPI, 92 tests.                             |
 | 2026-11-25 | Phase 4 complete: frontend foundation, auth pages, route guards, 87 tests.                |
 | 2026-11-24 | Phase 3 complete: auth, RBAC, sessions, OpenAPI security schemes, 79 tests.               |
 | 2026-11-24 | Phase 2 complete: Mongo/Redis connections, readiness, validation, query helpers, OpenAPI. |

@@ -24,10 +24,15 @@ const defaultOptions: UserServiceOptions = {
 };
 
 export class UserService {
+  private readonly options: UserServiceOptions;
+
   constructor(
     private readonly repository: UserRepository,
-    private readonly options: UserServiceOptions = defaultOptions,
-  ) {}
+    options: UserServiceOptions | undefined = defaultOptions,
+    private readonly revokeSessions?: (userId: string, reason: string, now: Date) => Promise<void>,
+  ) {
+    this.options = options;
+  }
 
   get verificationTtlMs(): number {
     return this.options.verificationTtlMs;
@@ -161,16 +166,84 @@ export class UserService {
     return this.repository.updateName(id, name);
   }
 
+  async list(
+    input: Parameters<UserRepository['list']>[0],
+  ): Promise<{ items: UserRecord[]; total: number }> {
+    return this.repository.list(input);
+  }
+
+  async updateUser(
+    id: string,
+    input: {
+      name?: string;
+      email?: string;
+      status?: 'pending_verification' | 'active' | 'suspended';
+      roleIds?: string[];
+      instructorApplicationStatus?: 'none' | 'pending' | 'approved' | 'rejected';
+    },
+  ): Promise<UserRecord | null> {
+    return this.repository.update(id, input);
+  }
+
+  async suspend(id: string, _actorId: string, now: Date): Promise<UserRecord | null> {
+    const user = await this.repository.update(id, { status: 'suspended' });
+    if (user !== null) {
+      await this.repository.incrementTokenVersion(id);
+      await this.revokeSessions?.(id, 'user_suspended', now);
+    }
+    return user;
+  }
+
+  async reactivate(id: string): Promise<UserRecord | null> {
+    return this.repository.update(id, { status: 'active' });
+  }
+
+  async softDelete(id: string, _actorId: string, now: Date): Promise<UserRecord | null> {
+    const result = await this.repository.softDelete(id, _actorId, now);
+    if (result !== null) {
+      await this.repository.incrementTokenVersion(id);
+      await this.revokeSessions?.(id, 'user_deleted', now);
+    }
+    return result;
+  }
+
+  async restore(id: string): Promise<UserRecord | null> {
+    return this.repository.restore(id);
+  }
+
+  async applyInstructorApplication(id: string): Promise<UserRecord | null> {
+    return this.repository.update(id, { instructorApplicationStatus: 'pending' });
+  }
+
+  async approveInstructorApplication(id: string, roleId: string): Promise<UserRecord | null> {
+    return this.repository.update(id, {
+      instructorApplicationStatus: 'approved',
+      roleIds: [roleId],
+      status: 'active',
+    });
+  }
+
+  async rejectInstructorApplication(id: string): Promise<UserRecord | null> {
+    return this.repository.update(id, { instructorApplicationStatus: 'rejected' });
+  }
+
   async incrementTokenVersion(id: string): Promise<void> {
     await this.repository.incrementTokenVersion(id);
   }
 }
 
 export const userRepository = new UserRepository();
-export const userService = new UserService(userRepository, {
-  verificationTtlMs: 24 * 60 * 60 * 1000,
-  passwordResetTtlMs: 30 * 60 * 1000,
-  maxLoginAttempts: 5,
-  lockoutBaseMs: 15 * 60 * 60 * 1000,
-  lockoutMaxMs: 24 * 60 * 60 * 1000,
-});
+export const userService = new UserService(
+  userRepository,
+  {
+    verificationTtlMs: 24 * 60 * 60 * 1000,
+    passwordResetTtlMs: 30 * 60 * 1000,
+    maxLoginAttempts: 5,
+    lockoutBaseMs: 15 * 60 * 60 * 1000,
+    lockoutMaxMs: 24 * 60 * 60 * 1000,
+  },
+  async (userId, reason, now) => {
+    const { sessionRepository } = await import('../auth/auth.repository.js');
+    await sessionRepository.revokeAllForUser(userId, reason, now);
+  },
+);
