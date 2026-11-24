@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+set -e
+
+npx lint-staged --cwd frontend
+npx lint-staged --cwd backend
+npx lint-staged --cwd .
