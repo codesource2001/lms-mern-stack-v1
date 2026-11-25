@@ -7,6 +7,7 @@ import { z } from 'zod';
 
 import { env } from '../config/env.js';
 import { registerAuthOpenApi } from '../modules/auth/auth.openapi.js';
+import { registerCertificateOpenApi } from '../modules/certificates/certificate.openapi.js';
 import { registerUserOpenApi } from '../modules/users/user.openapi.js';
 
 extendZodWithOpenApi(z);
@@ -134,6 +135,7 @@ registry.registerPath({
 
 registerAuthOpenApi(registry);
 registerUserOpenApi(registry);
+registerCertificateOpenApi(registry);
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
@@ -143,7 +145,7 @@ export const openApiDocument = generator.generateDocument({
     title: 'Atrium LMS API',
     version: env.APP_VERSION,
     description:
-      'Phase 3 API contract. Authentication and RBAC are implemented; domain resources are introduced in later phases.',
+      'Phase 11 API contract. Authentication, RBAC, catalog, learning, assessments, and certificate issuance are implemented. Domain routes from earlier phases are still being documented.',
   },
   servers: [{ url: '/', description: 'Current origin' }],
   tags: [
@@ -151,5 +153,6 @@ export const openApiDocument = generator.generateDocument({
     { name: 'Discovery', description: 'API discovery metadata' },
     { name: 'Authentication', description: 'Account lifecycle and session management' },
     { name: 'Users', description: 'User management' },
+    { name: 'Certificates', description: 'Certificate issuance, verification, and download' },
   ],
 });

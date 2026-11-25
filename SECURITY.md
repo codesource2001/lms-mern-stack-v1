@@ -3,11 +3,11 @@
 | Field            | Value                      |
 | ---------------- | -------------------------- |
 | Project          | Atrium LMS (`lms-mern-v1`) |
-| Current build    | Phase 3 — auth and RBAC    |
+| Current build    | Phase 11 — certificates    |
 | Production ready | **No**                     |
-| Last reviewed    | 24 November 2026           |
+| Last reviewed    | 25 November 2026           |
 
-Atrium is being built in phases. Phase 3 implements secure account lifecycle, permission-based authorization, session rotation with reuse detection, CSRF defense, audit logging, and email verification/password reset. It does **not** include domain features or production deployment. Do not deploy this build as a public learning platform.
+Atrium is being built in phases. Phase 11 adds certificate issuance, public verification, authorized PDF download, and revocation with an audit trail. Authentication, RBAC, catalog, learning, enrollment, assignments, and quizzes are implemented from earlier phases. The frontend domain pages and production deployment are **not** implemented. Do not deploy this build as a public learning platform.
 
 ---
 
@@ -49,7 +49,7 @@ There is no security SLA for this phase. Once deployment exists (Phase 14), this
 
 ---
 
-## 3. Security controls implemented in Phase 3
+## 3. Security controls implemented through Phase 11
 
 ### Authentication and authorization
 
@@ -76,7 +76,7 @@ There is no security SLA for this phase. Once deployment exists (Phase 14), this
 - **Liveness isolation** — `/health` never touches a dependency, so a database outage cannot trigger a restart loop.
 - **Schema conventions** — models are built through `createBaseSchema()`, which applies timestamps and hides `_id`/`__v` from JSON. Soft delete is opt-in and never silently applied.
 - **Bounded queries** — the only sanctioned list helpers cap page size at 100, allowlist sort fields, reject unknown filters, and require escaping of search terms used in regexes.
-- **Idempotent seeding** — the runner executes seeds in dependency order and stops at the first failure. Phase 2 registers no seed data.
+- **Idempotent seeding** — the runner executes seeds in dependency order and stops at the first failure. The RBAC catalog seeds roles and permissions idempotently.
 
 ### API transport and headers
 
@@ -93,11 +93,22 @@ There is no security SLA for this phase. Once deployment exists (Phase 14), this
 - **Configuration validation** — all backend environment variables are parsed by Zod at startup. Invalid configuration fails fast with field-level messages and never falls back to insecure defaults.
 - **Centralized error handling** — known errors use stable codes; unknown errors become a generic `500 INTERNAL_SERVER_ERROR`. Stack traces, database details, and internal paths are not returned to clients.
 - **Structured logging with redaction** — Pino redacts authorization headers, cookies, `set-cookie`, passwords, tokens, and refresh tokens. API responses are not logged by default. Connection lifecycle logs contain dependency names, never connection strings.
-- **Request validation** — Zod validates params, query, and body at the boundary, returning `422 VALIDATION_ERROR` with source-qualified fields. The middleware is implemented and tested but not yet used by a production route.
+- **Request validation** — Zod validates params, query, and body at the boundary, returning `422 VALIDATION_ERROR` with source-qualified fields. Domain routes use the middleware.
 - **Generated API contract** — OpenAPI 3.1 is generated from Zod schemas. Swagger UI is mounted only outside production or with `ENABLE_API_DOCS=true`, and the relaxed CSP applies only while docs are enabled.
 - **No client secrets** — only `VITE_*` variables are exposed to the bundle, and they are validated. No secrets exist in the frontend today.
 - **Strict TypeScript** — `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, and `verbatimModuleSyntax` reduce classes of null/undefined and import defects.
 - **Dependency pinning** — exact versions and a committed lockfile. `npm install` reported **0 known vulnerabilities** at the Phase 2 baseline; this is point-in-time evidence, not a guarantee.
+
+### Certificates and public verification
+
+- **Non-enumerable identifiers** — certificate IDs use a `CRT-` prefix plus 18 random bytes encoded as base64url (144 bits of entropy). They are not sequential and cannot be derived from a user or course ID.
+- **Server-side eligibility** — issuance requires a published course, an active enrollment, and completion of every lesson. Client input cannot waive these checks.
+- **Idempotent issuance** — a unique partial index enforces one active certificate per learner and course. Concurrent requests resolve to the winner instead of creating duplicates.
+- **Snapshot records** — recipient name and course title are captured at issuance so verification and PDFs remain stable if profile or course titles change later.
+- **Minimal public disclosure** — public verification returns only certificate ID, status, recipient name, course title, issue date, and revocation date. It does not return email addresses, user IDs, enrollment IDs, or internal database identifiers.
+- **Authorized downloads** — certificate PDFs require authentication and are limited to the certificate owner or an administrator. Revoked certificates are not served.
+- **Revocation audit trail** — revocation stores the actor, reason, and timestamp, writes an audit log entry, and permits a new certificate to be issued after revocation. Revoked records are retained.
+- **Certificate permission split** — `certificates:read` covers self-service issuance, listing, and download; `certificates:issue` covers administrative issuance and revocation. Students do not receive the administrative permission.
 
 ### Local infrastructure
 
@@ -118,30 +129,32 @@ There is no security SLA for this phase. Once deployment exists (Phase 14), this
 
 ## 4. Known gaps and limitations
 
-These are intentional for Phase 3. Do not mistake the presence of a control above for end-to-end security.
+These are intentional for Phase 11. Do not mistake the presence of a control above for end-to-end security.
 
-| Gap                                           | Impact                                                                          | Planned phase      |
-| --------------------------------------------- | ------------------------------------------------------------------------------- | ------------------ |
-| No authorization matrix for domain resources  | Middleware matrix exists; resource ownership checks arrive with domain features | 5+                 |
-| No MFA                                        | Account takeover resistance is password-only                                    | Post-Phase 3 spike |
-| No file upload controls                       | Upload features do not exist yet                                                | 6                  |
-| Validation middleware unused by domain routes | No live domain route consumes it yet; covered by tests                          | 5+                 |
-| No domain collections or indexes              | Only auth/RBAC schemas exist; no course data model                              | 5+                 |
-| Redis has no application cache yet            | Client is connected but unused for cache; session state is in MongoDB           | 4 / 13             |
-| Rate limiter uses in-memory store             | Per-process limits; reset on restart; not distributed                           | 3 / 13             |
-| No TLS for MongoDB or Redis                   | Local plaintext connections only                                                | 14                 |
-| No TLS termination                            | Local HTTP only                                                                 | 14                 |
-| No CSP for the SPA                            | API Helmet CSP does not protect the static frontend                             | 14                 |
-| No WAF, bot defense, or DDoS protection       | Hosting-layer concern                                                           | 14                 |
-| No MFA                                        | Account takeover resistance is password-only                                    | Post-Phase 3 spike |
-| No file upload controls                       | Upload features do not exist yet                                                | 6                  |
-| No backups or restore drills                  | No production data exists                                                       | 14 / 15            |
-| No SBOM or provenance attestation             | Supply-chain visibility is limited to the lockfile and audit                    | 13 / 14            |
-| Dev credentials in `.env.example`             | Safe only because they are local placeholders and documented                    | Ongoing            |
-| Access logs include request URLs              | Secrets must never be placed in query strings                                   | Ongoing            |
+| Gap                                                  | Impact                                                                                              | Planned phase      |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------ |
+| No MFA                                               | Account takeover resistance is password-only                                                        | Post-Phase 3 spike |
+| Rate limiter uses in-memory store                    | Per-process limits; reset on restart; not distributed                                               | 13                 |
+| Redis has no application cache yet                   | Client is connected but unused for cache; session state is in MongoDB                               | 13                 |
+| No TLS for MongoDB or Redis                          | Local plaintext connections only                                                                    | 14                 |
+| No TLS termination                                   | Local HTTP only                                                                                     | 14                 |
+| No CSP for the SPA                                   | API Helmet CSP does not protect the static frontend                                                 | 14                 |
+| No WAF, bot defense, or DDoS protection              | Hosting-layer concern                                                                               | 14                 |
+| No malware scanning for uploads                      | Uploads are MIME/size validated and privately stored, but not antivirus scanned                     | Post-Phase 11      |
+| Local file storage only                              | No object-storage provider, signed URLs, or replication                                             | 13 / 14            |
+| Certificate eligibility does not enforce assessments | Completion is required; configurable quiz/assignment or attendance policy is not implemented        | Future policy work |
+| No frontend certificate page or PDF preview          | Verification, listing, and PDF download exist as API endpoints only                                 | Frontend phase     |
+| No scheduled automatic issuance                      | Certificates are issued idempotently on request; no event-driven issuance when the last lesson ends | 12                 |
+| PDFs are not cryptographically signed                | Validity depends on the certificate ID lookup, not a digital signature                              | Future enhancement |
+| No audit log read API or UI                          | Audit records are written but only inspectable directly in MongoDB                                  | 12 / 13            |
+| No backups or restore drills                         | No production data exists                                                                           | 14 / 15            |
+| No SBOM or provenance attestation                    | Supply-chain visibility is limited to the lockfile and audit                                        | 13 / 14            |
+| Dev credentials in `.env.example`                    | Safe only because they are local placeholders and documented                                        | Ongoing            |
+| Access logs include request URLs                     | Secrets must never be placed in query strings                                                       | Ongoing            |
 
 Additional notes:
 
+- **Public certificate verification is intentionally unauthenticated.** It relies on 144-bit random identifiers and the global rate limit. If abuse appears, add an endpoint-specific limiter and a CAPTCHA at the edge.
 - **Rate limiting is not a security boundary.** It reduces abuse; it does not replace authentication, authorization, or input validation.
 - **Readiness discloses dependency state.** The route returns per-dependency status and latency by design. If a deployment considers that sensitive, restrict it at the edge rather than removing the probe.
 - **Validation helpers do not build Mongo filters.** Repositories must still map validated input onto indexed, parameterized queries and never interpolate raw user strings.
@@ -186,7 +199,7 @@ Additional notes:
 | Injection                                | Zod validation, Mongoose parameterization, allowlisted sorts, escaped search terms, no string-built queries, sanitized rich text (Phase 2+) |
 | XSS                                      | React escaping by default, no `dangerouslySetInnerHTML` without sanitization, CSP at deployment (Phase 7, 14)                               |
 | Malicious uploads                        | Content-type/signature validation, size limits, generated names, private storage, authorized delivery (Phase 6+)                            |
-| Enumeration                              | Non-guessable certificate IDs, uniform responses, rate limits (Phase 11)                                                                    |
+| Enumeration                              | Non-guessable certificate IDs, minimal verification fields, global rate limit (Implemented Phase 11)                                        |
 | Assessment cheating                      | Server-authoritative timers, attempt limits, idempotent submission, no pre-submit answer exposure (Phase 10)                                |
 | Data exfiltration via logs               | Redaction, no payload logging, PII minimization, retention policy (Phase 13)                                                                |
 | Dependency compromise                    | Exact pins, lockfile review, audit, minimal dependency surface (Ongoing)                                                                    |
@@ -281,7 +294,8 @@ No production incident process exists yet because no production deployment exist
 
 ## 11. Change log
 
-| Date       | Change                                                                             |
-| ---------- | ---------------------------------------------------------------------------------- |
-| 2026-11-24 | Phase 2 security policy: data-layer controls, readiness, validation, revised gaps. |
-| 2026-11-24 | Phase 1 security policy: controls, gaps, threat model, checklist.                  |
+| Date       | Change                                                                                     |
+| ---------- | ------------------------------------------------------------------------------------------ |
+| 2026-11-25 | Phase 11 security policy: certificate issuance, verification, downloads, revocation, gaps. |
+| 2026-11-24 | Phase 2 security policy: data-layer controls, readiness, validation, revised gaps.         |
+| 2026-11-24 | Phase 1 security policy: controls, gaps, threat model, checklist.                          |

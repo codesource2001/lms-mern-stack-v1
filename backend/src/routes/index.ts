@@ -11,6 +11,7 @@ import { createLessonRouter } from '../modules/lessons/lesson.routes.js';
 import { createEnrollmentRouter } from '../modules/enrollments/enrollment.routes.js';
 import { createAssignmentRouter } from '../modules/assignments/assignment.routes.js';
 import { createQuizRouter } from '../modules/quizzes/quiz.routes.js';
+import { createCertificateRouter } from '../modules/certificates/certificate.routes.js';
 
 export function createApiRouter(options: { authService?: AuthService } = {}): Router {
   const router = Router();
@@ -34,6 +35,7 @@ export function createApiRouter(options: { authService?: AuthService } = {}): Ro
   router.use('/enrollments', createEnrollmentRouter());
   router.use('/assignments', createAssignmentRouter());
   router.use('/quizzes', createQuizRouter());
+  router.use('/certificates', createCertificateRouter());
 
   return router;
 }

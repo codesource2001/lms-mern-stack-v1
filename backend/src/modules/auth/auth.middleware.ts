@@ -1,8 +1,15 @@
 import type { RequestHandler } from 'express';
 
 import { AppError } from '../../shared/errors/app-error.js';
+import type { AuthPrincipal } from './auth.types.js';
 import type { AuthService } from './auth.service.js';
 import { authService } from './auth.service.js';
+
+const ADMIN_ROLES = new Set(['super_admin', 'admin']);
+
+export function hasAdminRole(principal: Pick<AuthPrincipal, 'roles'>): boolean {
+  return principal.roles.some((role) => ADMIN_ROLES.has(role));
+}
 
 export function createRequireAuth(service: AuthService): RequestHandler {
   return async (req, _res, next) => {
