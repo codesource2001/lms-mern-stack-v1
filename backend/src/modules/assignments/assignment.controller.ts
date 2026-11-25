@@ -3,6 +3,7 @@ import multer from 'multer';
 
 import { sendSuccess } from '../../shared/http/response.js';
 import { getValidated } from '../../middlewares/validate.js';
+import { hasAdminRole } from '../auth/auth.middleware.js';
 import { storageProvider } from '../../infrastructure/storage/storage.service.js';
 import { assignmentService } from './assignment.service.js';
 
@@ -13,7 +14,7 @@ export function createAssignmentController() {
     const items = await assignmentService.listByCourse(
       req.params.courseId as string,
       req.auth!.userId,
-      false,
+      hasAdminRole(req.auth!),
     );
     sendSuccess(res, { message: 'Assignments', data: { items } });
   };
@@ -32,7 +33,7 @@ export function createAssignmentController() {
       dueAt: input.dueAt === undefined ? null : new Date(input.dueAt),
       maxScore: input.maxScore ?? 100,
       actorId: req.auth!.userId,
-      isAdmin: false,
+      isAdmin: hasAdminRole(req.auth!),
     });
     sendSuccess(res, { statusCode: 201, message: 'Assignment created', data: { assignment } });
   };
@@ -42,7 +43,7 @@ export function createAssignmentController() {
     const assignment = await assignmentService.update(
       req.params.id as string,
       req.auth!.userId,
-      false,
+      hasAdminRole(req.auth!),
       input,
     );
     sendSuccess(res, { message: 'Assignment updated', data: { assignment } });
@@ -52,13 +53,17 @@ export function createAssignmentController() {
     const assignment = await assignmentService.publish(
       req.params.id as string,
       req.auth!.userId,
-      false,
+      hasAdminRole(req.auth!),
     );
     sendSuccess(res, { message: 'Assignment published', data: { assignment } });
   };
 
   const remove: RequestHandler = async (req, res) => {
-    await assignmentService.delete(req.params.id as string, req.auth!.userId, false);
+    await assignmentService.delete(
+      req.params.id as string,
+      req.auth!.userId,
+      hasAdminRole(req.auth!),
+    );
     sendSuccess(res, { message: 'Assignment deleted', data: {} });
   };
 
@@ -93,7 +98,7 @@ export function createAssignmentController() {
     const items = await assignmentService.listSubmissions(
       req.params.id as string,
       req.auth!.userId,
-      false,
+      hasAdminRole(req.auth!),
     );
     sendSuccess(res, { message: 'Submissions', data: { items } });
   };
@@ -103,7 +108,7 @@ export function createAssignmentController() {
     const submission = await assignmentService.grade(
       req.params.submissionId as string,
       req.auth!.userId,
-      false,
+      hasAdminRole(req.auth!),
       {
         grade: input.grade,
         feedback: input.feedback ?? null,

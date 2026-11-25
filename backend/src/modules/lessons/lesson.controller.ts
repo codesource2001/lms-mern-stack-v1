@@ -3,6 +3,7 @@ import { createReadStream } from 'node:fs';
 
 import { sendSuccess } from '../../shared/http/response.js';
 import { getValidated } from '../../middlewares/validate.js';
+import { hasAdminRole } from '../auth/auth.middleware.js';
 import { lessonService } from './lesson.service.js';
 
 export function createLessonController() {
@@ -32,7 +33,7 @@ export function createLessonController() {
       durationSeconds: input.durationSeconds ?? null,
       isPreview: input.isPreview,
       actorId: req.auth!.userId,
-      isAdmin: false,
+      isAdmin: hasAdminRole(req.auth!),
     });
 
     sendSuccess(res, { statusCode: 201, message: 'Lesson created', data: { lesson } });
@@ -43,14 +44,14 @@ export function createLessonController() {
     const lesson = await lessonService.update(
       req.params.id as string,
       req.auth!.userId,
-      false,
+      hasAdminRole(req.auth!),
       input,
     );
     sendSuccess(res, { message: 'Lesson updated', data: { lesson } });
   };
 
   const remove: RequestHandler = async (req, res) => {
-    await lessonService.delete(req.params.id as string, req.auth!.userId, false);
+    await lessonService.delete(req.params.id as string, req.auth!.userId, hasAdminRole(req.auth!));
     sendSuccess(res, { message: 'Lesson deleted', data: {} });
   };
 
@@ -60,7 +61,7 @@ export function createLessonController() {
       req.params.courseId as string,
       input.orderedIds,
       req.auth!.userId,
-      false,
+      hasAdminRole(req.auth!),
     );
     sendSuccess(res, { message: 'Lessons reordered', data: { items: lessons } });
   };
@@ -74,7 +75,7 @@ export function createLessonController() {
     const asset = await lessonService.getAsset(
       req.params.id as string,
       req.auth?.userId ?? null,
-      false,
+      hasAdminRole(req.auth ?? { roles: [] }),
     );
     const stream = createReadStream(asset.path);
     stream.on('error', () => {

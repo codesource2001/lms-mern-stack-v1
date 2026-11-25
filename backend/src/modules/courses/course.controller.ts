@@ -5,6 +5,7 @@ import { sendSuccess } from '../../shared/http/response.js';
 import { getValidated } from '../../middlewares/validate.js';
 import { buildPaginationMeta } from '../../shared/query/pagination.js';
 import { storageProvider } from '../../infrastructure/storage/storage.service.js';
+import { hasAdminRole } from '../auth/auth.middleware.js';
 import { courseService } from './course.service.js';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
@@ -80,14 +81,18 @@ export function createCourseController() {
     const course = await courseService.update(
       req.params.id as string,
       req.auth!.userId,
-      false,
+      hasAdminRole(req.auth!),
       input,
     );
     sendSuccess(res, { message: 'Course updated', data: { course } });
   };
 
   const submit: RequestHandler = async (req, res) => {
-    const course = await courseService.submit(req.params.id as string, req.auth!.userId, false);
+    const course = await courseService.submit(
+      req.params.id as string,
+      req.auth!.userId,
+      hasAdminRole(req.auth!),
+    );
     sendSuccess(res, { message: 'Course submitted', data: { course } });
   };
 
@@ -97,12 +102,16 @@ export function createCourseController() {
   };
 
   const archive: RequestHandler = async (req, res) => {
-    const course = await courseService.archive(req.params.id as string, req.auth!.userId, false);
+    const course = await courseService.archive(
+      req.params.id as string,
+      req.auth!.userId,
+      hasAdminRole(req.auth!),
+    );
     sendSuccess(res, { message: 'Course archived', data: { course } });
   };
 
   const remove: RequestHandler = async (req, res) => {
-    await courseService.delete(req.params.id as string, req.auth!.userId, false);
+    await courseService.delete(req.params.id as string, req.auth!.userId, hasAdminRole(req.auth!));
     sendSuccess(res, { message: 'Course deleted', data: {} });
   };
 
@@ -117,7 +126,7 @@ export function createCourseController() {
       req.params.id as string,
       input.title,
       req.auth!.userId,
-      false,
+      hasAdminRole(req.auth!),
     );
     sendSuccess(res, { statusCode: 201, message: 'Section created', data: { section } });
   };
@@ -139,9 +148,14 @@ export function createCourseController() {
       maxSizeBytes: 5 * 1024 * 1024,
     });
 
-    const course = await courseService.update(req.params.id as string, req.auth!.userId, false, {
-      thumbnailKey: stored.key,
-    });
+    const course = await courseService.update(
+      req.params.id as string,
+      req.auth!.userId,
+      hasAdminRole(req.auth!),
+      {
+        thumbnailKey: stored.key,
+      },
+    );
 
     sendSuccess(res, { message: 'Thumbnail uploaded', data: { course, file: stored } });
   };

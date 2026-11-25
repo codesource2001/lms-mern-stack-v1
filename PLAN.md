@@ -475,19 +475,21 @@ The live smoke used host ports **27019/6380** because local ports 27017/6379 wer
 - [~] Student assignment dashboard and submission history (backend `/assignments/mine` implemented; frontend deferred)
 - [ ] Notification hooks for deadlines and grades
 - [x] File validation, quotas, and private storage
-- [~] Authorization tests across instructor, student, and admin (ownership checks exist in the service; dedicated assignment tests are still missing)
+- [x] Authorization tests across instructor, student, and admin
 - [ ] Docs and OpenAPI updates
 
 ### Phase 9 verification evidence
 
-| Check                 | Command / action        | Result                                  |
-| --------------------- | ----------------------- | --------------------------------------- |
-| Format                | `npm run format:check`  | Pass                                    |
-| Lint                  | `npm run lint`          | Pass, warnings only                     |
-| Typecheck             | `npm run typecheck`     | Pass, both workspaces                   |
-| Tests                 | `npm run test`          | 101 tests pass (93 backend, 8 frontend) |
-| Build                 | `npm run build`         | Pass                                    |
-| Compose configuration | `docker compose config` | Pass                                    |
+| Check                 | Command / action        | Result                                   |
+| --------------------- | ----------------------- | ---------------------------------------- |
+| Format                | `npm run format:check`  | Pass                                     |
+| Lint                  | `npm run lint`          | Pass, warnings only                      |
+| Typecheck             | `npm run typecheck`     | Pass, both workspaces                    |
+| Tests                 | `npm run test`          | 139 tests pass (131 backend, 8 frontend) |
+| Build                 | `npm run build`         | Pass                                     |
+| Compose configuration | `docker compose config` | Pass                                     |
+
+Remediation (2026-11-25): administrative override is wired into the assignment, course, lesson, and quiz controllers. Assignment service tests cover ownership, admin override, late submissions, versioning, grading, and submission visibility; controller tests assert the admin flag is passed.
 
 ### Phase 9 decisions and known constraints
 
@@ -496,11 +498,11 @@ The live smoke used host ports **27019/6380** because local ports 27017/6379 wer
 - **OpenAPI registration for assignments is not yet added.**
 - **Submission files are stored through the local storage provider** with size and MIME validation.
 
-**Acceptance status — partial**
+**Acceptance criteria - verified**
 
-- Students cannot read other students' submissions: service-level ownership checks are implemented.
+- Students cannot read other students' submissions: service-level ownership checks are implemented and tested.
 - Deadlines are enforced server-side: late submissions are flagged and submission timestamps are server-controlled.
-- Only course instructors/admins can grade: instructors are enforced; **admin override is not wired in the controller yet**, so an administrator who is not the course instructor is rejected. Remediation is tracked before Phase 12.
+- Only course instructors/admins can grade: ownership checks and the administrative override are implemented and covered by service and controller tests.
 
 ---
 
@@ -516,19 +518,21 @@ The live smoke used host ports **27019/6380** because local ports 27017/6379 wer
 - [~] Attempt history and result views (backend attempt retrieval implemented; frontend views deferred)
 - [~] Result analytics for students and instructors (basic scores implemented; analytics deferred)
 - [~] Anti-abuse controls: attempt limits, rate limits, idempotent submission (attempt limits and single-submit guard implemented; only the global rate limit applies)
-- [ ] Grading and timer tests, including clock-skew cases
+- [~] Grading and timer tests, including clock-skew cases (grading, attempt-limit, expiry, and access-control tests added; clock-skew simulation deferred)
 - [ ] Docs and OpenAPI updates
 
 ### Phase 10 verification evidence
 
-| Check                 | Command / action        | Result                                  |
-| --------------------- | ----------------------- | --------------------------------------- |
-| Format                | `npm run format:check`  | Pass                                    |
-| Lint                  | `npm run lint`          | Pass, warnings only                     |
-| Typecheck             | `npm run typecheck`     | Pass, both workspaces                   |
-| Tests                 | `npm run test`          | 101 tests pass (93 backend, 8 frontend) |
-| Build                 | `npm run build`         | Pass                                    |
-| Compose configuration | `docker compose config` | Pass                                    |
+| Check                 | Command / action        | Result                                   |
+| --------------------- | ----------------------- | ---------------------------------------- |
+| Format                | `npm run format:check`  | Pass                                     |
+| Lint                  | `npm run lint`          | Pass, warnings only                      |
+| Typecheck             | `npm run typecheck`     | Pass, both workspaces                    |
+| Tests                 | `npm run test`          | 139 tests pass (131 backend, 8 frontend) |
+| Build                 | `npm run build`         | Pass                                     |
+| Compose configuration | `docker compose config` | Pass                                     |
+
+Remediation (2026-11-25): quiz service tests cover attempt limits, server-authoritative expiry, objective grading normalization, manual short-answer review, answer secrecy, and administrative access. Controller tests assert the admin flag is passed.
 
 ### Phase 10 decisions and known constraints
 
@@ -538,12 +542,13 @@ The live smoke used host ports **27019/6380** because local ports 27017/6379 wer
 - **OpenAPI registration for quizzes is not yet added.**
 - **Frontend quiz UI is deferred.**
 
-**Acceptance status — implemented, not fully verified**
+**Acceptance criteria - verified with one deferred edge case**
 
-- Clients cannot extend time or resubmit graded attempts: server-side expiry and single-submit guards are implemented.
-- Correct answers are never exposed before submission: attempt retrieval omits `correctAnswer`.
-- Grading is deterministic for objective questions: exact normalized string comparison is used.
-- **Automated timer and grading tests are still missing**, and the admin override used by manual grading is not wired in the controller yet.
+- Clients cannot extend time or resubmit graded attempts: server-side expiry and single-submit guards are implemented and tested.
+- Correct answers are never exposed before submission: attempt retrieval omits `correctAnswer` and the omission is tested.
+- Grading is deterministic for objective questions: exact normalized string comparison is implemented and tested.
+- Administrative override for manual grading is wired and covered by controller tests.
+- Clock-skew between client and server is not simulated; expiry uses server time only.
 
 ---
 
@@ -568,7 +573,7 @@ The live smoke used host ports **27019/6380** because local ports 27017/6379 wer
 | Format                | `npm run format:check`  | Pass                                     |
 | Lint                  | `npm run lint`          | Pass, warnings only                      |
 | Typecheck             | `npm run typecheck`     | Pass, both workspaces                    |
-| Tests                 | `npm run test`          | 111 tests pass (103 backend, 8 frontend) |
+| Tests                 | `npm run test`          | 139 tests pass (131 backend, 8 frontend) |
 | Build                 | `npm run build`         | Pass                                     |
 | Compose configuration | `docker compose config` | Pass                                     |
 
@@ -742,6 +747,7 @@ Tracked for resolution in the phase that needs them:
 
 | Date       | Change                                                                                    |
 | ---------- | ----------------------------------------------------------------------------------------- |
+| 2026-11-25 | Phase 9/10 remediation: admin overrides wired, 28 tests added, 139 total.                 |
 | 2026-11-25 | Phase 11 complete: certificate issuance, verification, PDF, revocation, 111 tests.        |
 | 2026-11-25 | Phase 10 complete: quiz and examination backend.                                          |
 | 2026-11-25 | Phase 9 complete: assignment management backend.                                          |

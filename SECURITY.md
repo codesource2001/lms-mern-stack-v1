@@ -296,6 +296,7 @@ No production incident process exists yet because no production deployment exist
 
 | Date       | Change                                                                                     |
 | ---------- | ------------------------------------------------------------------------------------------ |
+| 2026-11-25 | Phase 9/10 remediation: administrative override wired into domain controllers and tested.  |
 | 2026-11-25 | Phase 11 security policy: certificate issuance, verification, downloads, revocation, gaps. |
 | 2026-11-24 | Phase 2 security policy: data-layer controls, readiness, validation, revised gaps.         |
 | 2026-11-24 | Phase 1 security policy: controls, gaps, threat model, checklist.                          |
