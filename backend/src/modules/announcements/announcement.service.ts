@@ -1,4 +1,5 @@
 import { AppError } from '../../shared/errors/app-error.js';
+import { auditService, noOpAudit, type AuditService } from '../audit/audit.service.js';
 import { jobQueue } from '../../infrastructure/jobs/job-queue.js';
 import { courseService } from '../courses/course.service.js';
 import { enrollmentService } from '../enrollments/enrollment.service.js';
@@ -14,6 +15,7 @@ export class AnnouncementService {
   constructor(
     private readonly repository: AnnouncementRepository,
     private readonly queue: typeof jobQueue,
+    private readonly audit: AuditService = noOpAudit,
   ) {}
 
   async create(input: {
@@ -42,6 +44,15 @@ export class AnnouncementService {
       title: input.title,
       body: input.body,
       publishedAt: new Date(),
+    });
+
+    await this.audit.record({
+      actorUserId: input.actorId,
+      action: 'announcement.published',
+      result: 'success',
+      targetType: 'announcement',
+      targetId: announcement.id,
+      metadata: { courseId: input.courseId },
     });
 
     await this.queue.enqueue({
@@ -92,6 +103,14 @@ export class AnnouncementService {
     }
 
     await this.repository.deleteById(id);
+
+    await this.audit.record({
+      actorUserId: actorId,
+      action: 'announcement.deleted',
+      result: 'success',
+      targetType: 'announcement',
+      targetId: id,
+    });
   }
 
   async fanout(announcementId: string): Promise<number> {
@@ -122,4 +141,8 @@ export class AnnouncementService {
   }
 }
 
-export const announcementService = new AnnouncementService(announcementRepository, jobQueue);
+export const announcementService = new AnnouncementService(
+  announcementRepository,
+  jobQueue,
+  auditService,
+);

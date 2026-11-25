@@ -66,7 +66,11 @@ function makeRepositories() {
 describe('LessonService', () => {
   it('creates a lesson for the course owner', async () => {
     const { lessonRepository, courseRepository } = makeRepositories();
-    const service = new LessonService(lessonRepository as any, courseRepository as any);
+    const service = new LessonService(
+      lessonRepository as any,
+      courseRepository as any,
+      async () => true,
+    );
 
     const lesson = await service.create({
       courseId: 'course-1',
@@ -83,7 +87,11 @@ describe('LessonService', () => {
 
   it('rejects lesson creation by a non-owner', async () => {
     const { lessonRepository, courseRepository } = makeRepositories();
-    const service = new LessonService(lessonRepository as any, courseRepository as any);
+    const service = new LessonService(
+      lessonRepository as any,
+      courseRepository as any,
+      async () => true,
+    );
 
     await expect(
       service.create({
@@ -102,24 +110,69 @@ describe('LessonService', () => {
     const original = await courses.findById('course-1');
     original.status = 'draft';
 
-    const lesson = await new LessonService(lessonRepository as any, courseRepository as any).create(
-      {
-        courseId: 'course-1',
-        title: 'Protected asset',
-        type: 'video',
-        assetKey: 'asset-key',
-        actorId: 'instructor-1',
-        isAdmin: false,
-      },
-    );
+    const lesson = await new LessonService(
+      lessonRepository as any,
+      courseRepository as any,
+      async () => true,
+    ).create({
+      courseId: 'course-1',
+      title: 'Protected asset',
+      type: 'video',
+      assetKey: 'asset-key',
+      actorId: 'instructor-1',
+      isAdmin: false,
+    });
 
     await expect(
-      new LessonService(lessonRepository as any, courseRepository as any).getAsset(
-        lesson.id,
-        'student-1',
-        false,
-      ),
+      new LessonService(
+        lessonRepository as any,
+        courseRepository as any,
+        async () => true,
+      ).getAsset(lesson.id, 'student-1', false),
     ).rejects.toMatchObject({
+      statusCode: 403,
+      code: 'FORBIDDEN',
+    });
+  });
+
+  it('rejects lesson completion without course access', async () => {
+    const { lessonRepository, courseRepository } = makeRepositories();
+    const service = new LessonService(
+      lessonRepository as any,
+      courseRepository as any,
+      async () => false,
+    );
+    const lesson = await service.create({
+      courseId: 'course-1',
+      title: 'Protected lesson',
+      type: 'text',
+      actorId: 'instructor-1',
+      isAdmin: false,
+    });
+
+    await expect(service.complete(lesson.id, 'student-1')).rejects.toMatchObject({
+      statusCode: 403,
+      code: 'FORBIDDEN',
+    });
+  });
+
+  it('rejects protected asset access for a published course without enrollment', async () => {
+    const { lessonRepository, courseRepository } = makeRepositories();
+    const service = new LessonService(
+      lessonRepository as any,
+      courseRepository as any,
+      async () => false,
+    );
+    const lesson = await service.create({
+      courseId: 'course-1',
+      title: 'Enrollment gated asset',
+      type: 'video',
+      assetKey: 'asset-key',
+      actorId: 'instructor-1',
+      isAdmin: false,
+    });
+
+    await expect(service.getAsset(lesson.id, 'student-1', false)).rejects.toMatchObject({
       statusCode: 403,
       code: 'FORBIDDEN',
     });
@@ -127,7 +180,11 @@ describe('LessonService', () => {
 
   it('completes a lesson', async () => {
     const { lessonRepository, courseRepository } = makeRepositories();
-    const service = new LessonService(lessonRepository as any, courseRepository as any);
+    const service = new LessonService(
+      lessonRepository as any,
+      courseRepository as any,
+      async () => true,
+    );
 
     const lesson = await service.create({
       courseId: 'course-1',

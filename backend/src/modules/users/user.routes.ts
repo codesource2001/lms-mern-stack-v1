@@ -8,6 +8,8 @@ import {
   validateUserUpdate,
   validateInstructorApplication,
 } from './user.validation.js';
+import { mutatingLimiter } from '../../middlewares/endpoint-rate-limit.js';
+import { validateIdParam } from '../../middlewares/validate-id.js';
 
 export function createUserRouter() {
   const router = Router();
@@ -20,11 +22,19 @@ export function createUserRouter() {
     validateUserList,
     controller.list,
   );
-  router.get('/:id', requireAuth, requirePermission(PERMISSIONS.USERS_READ), controller.get);
+  router.get(
+    '/:id',
+    requireAuth,
+    requirePermission(PERMISSIONS.USERS_READ),
+    validateIdParam('id'),
+    controller.get,
+  );
   router.patch(
     '/:id',
     requireAuth,
     requirePermission(PERMISSIONS.USERS_WRITE),
+    mutatingLimiter,
+    validateIdParam('id'),
     validateUserUpdate,
     controller.update,
   );
@@ -32,19 +42,31 @@ export function createUserRouter() {
     '/:id/suspend',
     requireAuth,
     requirePermission(PERMISSIONS.USERS_SUSPEND),
+    mutatingLimiter,
+    validateIdParam('id'),
     controller.suspend,
   );
   router.post(
     '/:id/reactivate',
     requireAuth,
     requirePermission(PERMISSIONS.USERS_SUSPEND),
+    mutatingLimiter,
+    validateIdParam('id'),
     controller.reactivate,
   );
-  router.delete('/:id', requireAuth, requirePermission(PERMISSIONS.USERS_WRITE), controller.remove);
+  router.delete(
+    '/:id',
+    requireAuth,
+    requirePermission(PERMISSIONS.USERS_WRITE),
+    mutatingLimiter,
+    validateIdParam('id'),
+    controller.remove,
+  );
 
   router.post(
     '/me/instructor-application',
     requireAuth,
+    mutatingLimiter,
     validateInstructorApplication,
     controller.applyInstructor,
   );
@@ -52,12 +74,16 @@ export function createUserRouter() {
     '/:id/approve-instructor',
     requireAuth,
     requirePermission(PERMISSIONS.USERS_WRITE),
+    mutatingLimiter,
+    validateIdParam('id'),
     controller.approveInstructor,
   );
   router.post(
     '/:id/reject-instructor',
     requireAuth,
     requirePermission(PERMISSIONS.USERS_WRITE),
+    mutatingLimiter,
+    validateIdParam('id'),
     controller.rejectInstructor,
   );
 

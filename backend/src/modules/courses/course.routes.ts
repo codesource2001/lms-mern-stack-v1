@@ -14,6 +14,8 @@ import {
 import { sendSuccess } from '../../shared/http/response.js';
 import { lessonController } from '../lessons/lesson.controller.js';
 import { validateLessonCreate, validateReorder } from '../lessons/lesson.validation.js';
+import { mutatingLimiter, uploadLimiter } from '../../middlewares/endpoint-rate-limit.js';
+import { validateIdParam } from '../../middlewares/validate-id.js';
 
 export function createCategoryRouter() {
   const router = Router();
@@ -27,6 +29,7 @@ export function createCategoryRouter() {
     '/',
     requireAuth,
     requirePermission(PERMISSIONS.COURSES_WRITE),
+    mutatingLimiter,
     validateCategory,
     async (req, res) => {
       const category = await categoryService.create(
@@ -40,6 +43,8 @@ export function createCategoryRouter() {
     '/:id',
     requireAuth,
     requirePermission(PERMISSIONS.COURSES_WRITE),
+    mutatingLimiter,
+    validateIdParam('id'),
     validateCategory,
     async (req, res) => {
       const category = await categoryService.update(
@@ -54,6 +59,8 @@ export function createCategoryRouter() {
     '/:id',
     requireAuth,
     requirePermission(PERMISSIONS.COURSES_WRITE),
+    mutatingLimiter,
+    validateIdParam('id'),
     async (req, res) => {
       await categoryService.delete(req.params.id as string);
       sendSuccess(res, { message: 'Category deleted', data: {} });
@@ -73,12 +80,13 @@ export function createCourseRouter() {
     requirePermission(PERMISSIONS.COURSES_WRITE),
     courseController.mine,
   );
-  router.get('/:id', courseController.get);
+  router.get('/:id', validateIdParam('id'), courseController.get);
 
   router.post(
     '/',
     requireAuth,
     requirePermission(PERMISSIONS.COURSES_WRITE),
+    mutatingLimiter,
     validateCourseCreate,
     courseController.create,
   );
@@ -86,6 +94,8 @@ export function createCourseRouter() {
     '/:id',
     requireAuth,
     requirePermission(PERMISSIONS.COURSES_WRITE),
+    mutatingLimiter,
+    validateIdParam('id'),
     validateCourseUpdate,
     courseController.update,
   );
@@ -93,32 +103,42 @@ export function createCourseRouter() {
     '/:id/submit',
     requireAuth,
     requirePermission(PERMISSIONS.COURSES_WRITE),
+    mutatingLimiter,
+    validateIdParam('id'),
     courseController.submit,
   );
   router.post(
     '/:id/publish',
     requireAuth,
     requirePermission(PERMISSIONS.COURSES_PUBLISH),
+    mutatingLimiter,
+    validateIdParam('id'),
     courseController.publish,
   );
   router.post(
     '/:id/archive',
     requireAuth,
     requirePermission(PERMISSIONS.COURSES_WRITE),
+    mutatingLimiter,
+    validateIdParam('id'),
     courseController.archive,
   );
   router.delete(
     '/:id',
     requireAuth,
     requirePermission(PERMISSIONS.COURSES_DELETE),
+    mutatingLimiter,
+    validateIdParam('id'),
     courseController.remove,
   );
 
-  router.get('/:id/sections', courseController.sections);
+  router.get('/:id/sections', validateIdParam('id'), courseController.sections);
   router.post(
     '/:id/sections',
     requireAuth,
     requirePermission(PERMISSIONS.COURSES_WRITE),
+    mutatingLimiter,
+    validateIdParam('id'),
     validateSection,
     courseController.createSection,
   );
@@ -126,6 +146,8 @@ export function createCourseRouter() {
     '/:id/thumbnail',
     requireAuth,
     requirePermission(PERMISSIONS.COURSES_WRITE),
+    uploadLimiter,
+    validateIdParam('id'),
     upload.single('file'),
     courseController.uploadThumbnail,
   );
@@ -133,12 +155,15 @@ export function createCourseRouter() {
     '/:id/lessons',
     requireAuth,
     requirePermission(PERMISSIONS.LESSONS_READ),
+    validateIdParam('id'),
     lessonController.list,
   );
   router.post(
     '/:id/lessons',
     requireAuth,
     requirePermission(PERMISSIONS.LESSONS_WRITE),
+    mutatingLimiter,
+    validateIdParam('id'),
     validateLessonCreate,
     lessonController.create,
   );
@@ -146,9 +171,13 @@ export function createCourseRouter() {
     '/:id/lessons/reorder',
     requireAuth,
     requirePermission(PERMISSIONS.LESSONS_WRITE),
+    mutatingLimiter,
+    validateIdParam('id'),
     validateReorder,
     lessonController.reorder,
   );
 
   return router;
 }
+
+export const courseRouter = createCourseRouter();

@@ -1,13 +1,13 @@
 # Security Policy — Atrium LMS
 
-| Field            | Value                                  |
-| ---------------- | -------------------------------------- |
-| Project          | Atrium LMS (`lms-mern-v1`)             |
-| Current build    | Phase 12 — notifications and analytics |
-| Production ready | **No**                                 |
-| Last reviewed    | 25 November 2026                       |
+| Field            | Value                      |
+| ---------------- | -------------------------- |
+| Project          | Atrium LMS (`lms-mern-v1`) |
+| Current build    | Phase 13 — security audit  |
+| Production ready | **No**                     |
+| Last reviewed    | 25 November 2026           |
 
-Atrium is being built in phases. Phase 12 adds in-app notifications with preferences, observable email delivery, idempotent background jobs, course announcements, and role-scoped analytics dashboards. Authentication, RBAC, catalog, learning, enrollment, assessments, and certificates are implemented from earlier phases. Production deployment is **not** implemented. Do not deploy this build as a public learning platform.
+Atrium is being built in phases. Phase 13 closes object-level access gaps, validates every id-bearing route, adds endpoint-specific rate limits, and expands audit coverage. The full audit, OWASP mapping, and performance budgets are in [`docs/SECURITY-AUDIT.md`](docs/SECURITY-AUDIT.md). Production deployment is **not** implemented. Do not deploy this build as a public learning platform.
 
 ---
 
@@ -49,7 +49,7 @@ There is no security SLA for this phase. Once deployment exists (Phase 14), this
 
 ---
 
-## 3. Security controls implemented through Phase 12
+## 3. Security controls implemented through Phase 13
 
 ### Authentication and authorization
 
@@ -121,6 +121,14 @@ There is no security SLA for this phase. Once deployment exists (Phase 14), this
 - **Role-scoped analytics** — one endpoint returns admin, instructor, or student data based on server-side role resolution. Students can read only their own progress, grades, and enrolled-course deadlines. All aggregations have hard result limits.
 - **No analytics write path** — the analytics module reads through domain service methods and never imports another module's model or repository.
 
+### Phase 13 hardening
+
+- **Boundary validation on every id-bearing route** — `validateIdParam()` rejects malformed identifiers with `422 VALIDATION_ERROR` before a controller reads them.
+- **Endpoint-specific limits** — public verification, analytics, notification reads/writes, uploads, and mutating domain routes have tighter limits in addition to the global limiter.
+- **Course access enforcement** — lesson completion, published lesson assets, assignment submissions, and quiz starts check active enrollment server-side; course owners and administrators remain exempt.
+- **Expanded audit trail** — enrollment state changes, grading, announcements, certificates, and auth events write non-fatal audit records with actor, action, target, and result.
+- **Test-backed authorization matrix** — 18 protected routes are asserted to return `401` without credentials, `403` without permission, `422` for malformed params, and `429` for public-endpoint abuse.
+
 ### Local infrastructure
 
 - MongoDB 8.3 requires authentication; Redis 8.12 requires a password and runs with append-only persistence.
@@ -140,33 +148,32 @@ There is no security SLA for this phase. Once deployment exists (Phase 14), this
 
 ## 4. Known gaps and limitations
 
-These are intentional for Phase 12. Do not mistake the presence of a control above for end-to-end security.
+These are intentional for Phase 13. Do not mistake the presence of a control above for end-to-end security.
 
-| Gap                                                      | Impact                                                                                               | Planned phase      |
-| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------ |
-| No MFA                                                   | Account takeover resistance is password-only                                                         | Post-Phase 3 spike |
-| Rate limiter uses in-memory store                        | Per-process limits; reset on restart; not distributed                                                | 13                 |
-| Redis has no application cache yet                       | Job state uses Redis, but no cache keys or invalidation policy exists                                | 13                 |
-| No TLS for MongoDB or Redis                              | Local plaintext connections only                                                                     | 14                 |
-| No TLS termination                                       | Local HTTP only                                                                                      | 14                 |
-| No CSP for the SPA                                       | API Helmet CSP does not protect the static frontend                                                  | 14                 |
-| No WAF, bot defense, or DDoS protection                  | Hosting-layer concern                                                                                | 14                 |
-| No malware scanning for uploads                          | Uploads are MIME/size validated and privately stored, but not antivirus scanned                      | Post-Phase 11      |
-| Local file storage only                                  | No object-storage provider, signed URLs, or replication                                              | 13 / 14            |
-| Certificate eligibility does not enforce assessments     | Completion is required; configurable quiz/assignment or attendance policy is not implemented         | Future policy work |
-| No frontend certificate page or PDF preview              | Verification, listing, and PDF download exist as API endpoints only                                  | Frontend phase     |
-| No scheduled automatic issuance                          | Certificates are issued idempotently on request; no event-driven issuance when the last lesson ends  | Future             |
-| PDFs are not cryptographically signed                    | Validity depends on the certificate ID lookup, not a digital signature                               | Future enhancement |
-| No audit log read API or UI                              | Audit records are written but only inspectable directly in MongoDB                                   | 13                 |
-| Workers run in the API process                           | HTTP and job scaling are coupled; no isolated worker deployment yet                                  | 14                 |
-| No endpoint-specific limiter for notifications/analytics | Global in-memory limit only; abuse resistance is limited                                             | 13                 |
-| No quiz deadline reminders                               | Quizzes have no scheduling fields, so only assignment reminders run                                  | Future model work  |
-| No announcement email fan-out                            | Bulk announcement email is intentionally deferred until rate limiting and unsubscribe handling exist | Future             |
-| No backoff jitter in the job runner                      | Synchronized retries can burst after a provider outage                                               | 13                 |
-| No backups or restore drills                             | No production data exists                                                                            | 14 / 15            |
-| No SBOM or provenance attestation                        | Supply-chain visibility is limited to the lockfile and audit                                         | 13 / 14            |
-| Dev credentials in `.env.example`                        | Safe only because they are local placeholders and documented                                         | Ongoing            |
-| Access logs include request URLs                         | Secrets must never be placed in query strings                                                        | Ongoing            |
+| Gap                                                  | Impact                                                                                               | Planned phase      |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------ |
+| No MFA                                               | Account takeover resistance is password-only                                                         | Post-Phase 3 spike |
+| Rate limiter uses in-memory store                    | Per-process limits; reset on restart; not distributed                                                | 13                 |
+| Redis has no application cache yet                   | Job state uses Redis, but no cache keys or invalidation policy exists                                | 13                 |
+| No TLS for MongoDB or Redis                          | Local plaintext connections only                                                                     | 14                 |
+| No TLS termination                                   | Local HTTP only                                                                                      | 14                 |
+| No CSP for the SPA                                   | API Helmet CSP does not protect the static frontend                                                  | 14                 |
+| No WAF, bot defense, or DDoS protection              | Hosting-layer concern                                                                                | 14                 |
+| No malware scanning for uploads                      | Uploads are MIME/size validated and privately stored, but not antivirus scanned                      | Post-Phase 11      |
+| Local file storage only                              | No object-storage provider, signed URLs, or replication                                              | 13 / 14            |
+| Certificate eligibility does not enforce assessments | Completion is required; configurable quiz/assignment or attendance policy is not implemented         | Future policy work |
+| No frontend certificate page or PDF preview          | Verification, listing, and PDF download exist as API endpoints only                                  | Frontend phase     |
+| No scheduled automatic issuance                      | Certificates are issued idempotently on request; no event-driven issuance when the last lesson ends  | Future             |
+| PDFs are not cryptographically signed                | Validity depends on the certificate ID lookup, not a digital signature                               | Future enhancement |
+| No audit log read API or UI                          | Audit records are written but only inspectable directly in MongoDB                                   | 14                 |
+| Workers run in the API process                       | HTTP and job scaling are coupled; no isolated worker deployment yet                                  | 14                 |
+| No quiz deadline reminders                           | Quizzes have no scheduling fields, so only assignment reminders run                                  | Future model work  |
+| No announcement email fan-out                        | Bulk announcement email is intentionally deferred until rate limiting and unsubscribe handling exist | Future             |
+| No backoff jitter in the job runner                  | Synchronized retries can burst after a provider outage                                               | 14                 |
+| No backups or restore drills                         | No production data exists                                                                            | 14 / 15            |
+| No SBOM or provenance attestation                    | Supply-chain visibility is limited to the lockfile and audit                                         | 13 / 14            |
+| Dev credentials in `.env.example`                    | Safe only because they are local placeholders and documented                                         | Ongoing            |
+| Access logs include request URLs                     | Secrets must never be placed in query strings                                                        | Ongoing            |
 
 Additional notes:
 
@@ -310,10 +317,11 @@ No production incident process exists yet because no production deployment exist
 
 ## 11. Change log
 
-| Date       | Change                                                                                     |
-| ---------- | ------------------------------------------------------------------------------------------ |
-| 2026-11-25 | Phase 12 security policy: notifications, preferences, jobs, analytics scope, new gaps.     |
-| 2026-11-25 | Phase 9/10 remediation: administrative override wired into domain controllers and tested.  |
-| 2026-11-25 | Phase 11 security policy: certificate issuance, verification, downloads, revocation, gaps. |
-| 2026-11-24 | Phase 2 security policy: data-layer controls, readiness, validation, revised gaps.         |
-| 2026-11-24 | Phase 1 security policy: controls, gaps, threat model, checklist.                          |
+| Date       | Change                                                                                        |
+| ---------- | --------------------------------------------------------------------------------------------- |
+| 2026-11-25 | Phase 13 security policy: access fixes, boundary validation, endpoint limits, audit coverage. |
+| 2026-11-25 | Phase 12 security policy: notifications, preferences, jobs, analytics scope, new gaps.        |
+| 2026-11-25 | Phase 9/10 remediation: administrative override wired into domain controllers and tested.     |
+| 2026-11-25 | Phase 11 security policy: certificate issuance, verification, downloads, revocation, gaps.    |
+| 2026-11-24 | Phase 2 security policy: data-layer controls, readiness, validation, revised gaps.            |
+| 2026-11-24 | Phase 1 security policy: controls, gaps, threat model, checklist.                             |

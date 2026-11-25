@@ -17,4 +17,9 @@ export class AuditLogService implements AuditService {
   }
 }
 
+/** Used by unit tests that construct services without infrastructure. */
+export const noOpAudit: AuditService = {
+  record: () => Promise.resolve(),
+};
+
 export const auditService = new AuditLogService(new MongoAuditRepository());

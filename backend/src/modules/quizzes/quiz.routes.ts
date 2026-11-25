@@ -10,6 +10,8 @@ import {
   validateAnswer,
   validateGrade,
 } from './quiz.validation.js';
+import { mutatingLimiter } from '../../middlewares/endpoint-rate-limit.js';
+import { validateIdParam } from '../../middlewares/validate-id.js';
 
 export function createQuizRouter() {
   const router = Router();
@@ -18,6 +20,7 @@ export function createQuizRouter() {
     '/banks',
     requireAuth,
     requirePermission(PERMISSIONS.QUIZZES_WRITE),
+    mutatingLimiter,
     validateQuestionBank,
     quizController.createBank,
   );
@@ -25,6 +28,7 @@ export function createQuizRouter() {
     '/questions',
     requireAuth,
     requirePermission(PERMISSIONS.QUIZZES_WRITE),
+    mutatingLimiter,
     validateQuestion,
     quizController.addQuestion,
   );
@@ -33,6 +37,7 @@ export function createQuizRouter() {
     '/',
     requireAuth,
     requirePermission(PERMISSIONS.QUIZZES_WRITE),
+    mutatingLimiter,
     validateQuiz,
     quizController.createQuiz,
   );
@@ -40,6 +45,8 @@ export function createQuizRouter() {
     '/:id/publish',
     requireAuth,
     requirePermission(PERMISSIONS.QUIZZES_WRITE),
+    mutatingLimiter,
+    validateIdParam('id'),
     quizController.publish,
   );
 
@@ -47,15 +54,32 @@ export function createQuizRouter() {
     '/:id/attempts',
     requireAuth,
     requirePermission(PERMISSIONS.QUIZZES_ATTEMPT),
+    mutatingLimiter,
+    validateIdParam('id'),
     quizController.start,
   );
-  router.get('/attempts/:id', requireAuth, quizController.getAttempt);
-  router.post('/attempts/:id/answers', requireAuth, validateAnswer, quizController.saveAnswer);
-  router.post('/attempts/:id/submit', requireAuth, quizController.submit);
+  router.get('/attempts/:id', requireAuth, validateIdParam('id'), quizController.getAttempt);
+  router.post(
+    '/attempts/:id/answers',
+    requireAuth,
+    mutatingLimiter,
+    validateIdParam('id'),
+    validateAnswer,
+    quizController.saveAnswer,
+  );
+  router.post(
+    '/attempts/:id/submit',
+    requireAuth,
+    mutatingLimiter,
+    validateIdParam('id'),
+    quizController.submit,
+  );
   router.post(
     '/attempts/:id/grade',
     requireAuth,
     requirePermission(PERMISSIONS.QUIZZES_GRADE),
+    mutatingLimiter,
+    validateIdParam('id'),
     validateGrade,
     quizController.grade,
   );

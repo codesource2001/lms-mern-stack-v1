@@ -3,6 +3,7 @@ import sanitizeHtml from 'sanitize-html';
 import { AppError } from '../../shared/errors/app-error.js';
 import { storageProvider } from '../../infrastructure/storage/storage.service.js';
 import { CourseRepository } from '../courses/course.repository.js';
+import { enrollmentService } from '../enrollments/enrollment.service.js';
 import { LessonRepository } from './lesson.repository.js';
 import { toLessonRecord } from './lesson.model.js';
 
@@ -10,6 +11,7 @@ export class LessonService {
   constructor(
     private readonly lessons: LessonRepository,
     private readonly courses: CourseRepository,
+    private readonly canAccess: (userId: string, courseId: string) => Promise<boolean>,
   ) {}
 
   async list(courseId: string) {
@@ -152,6 +154,15 @@ export class LessonService {
       throw new AppError('Lesson not found', { statusCode: 404, code: 'NOT_FOUND' });
     }
 
+    const courseId = lesson.course.toString();
+
+    if (!(await this.canAccess(userId, courseId))) {
+      throw new AppError('You do not have permission to perform this action', {
+        statusCode: 403,
+        code: 'FORBIDDEN',
+      });
+    }
+
     await this.lessons.markComplete(userId, lessonId);
 
     return { lessonId, completed: true };
@@ -172,8 +183,19 @@ export class LessonService {
 
     const isOwner = userId !== null && course.instructor.toString() === userId;
     const isPublished = course.status === 'published';
+    const privileged = isOwner || isAdmin;
 
-    if (!isPublished && !isOwner && !isAdmin) {
+    if (!privileged && !isPublished) {
+      throw new AppError('You do not have permission to perform this action', {
+        statusCode: 403,
+        code: 'FORBIDDEN',
+      });
+    }
+
+    if (
+      !privileged &&
+      (userId === null || !(await this.canAccess(userId, lesson.course.toString())))
+    ) {
       throw new AppError('You do not have permission to perform this action', {
         statusCode: 403,
         code: 'FORBIDDEN',
@@ -200,4 +222,8 @@ export class LessonService {
 
 export const lessonRepository = new LessonRepository();
 export const courseRepositoryForLessons = new CourseRepository();
-export const lessonService = new LessonService(lessonRepository, courseRepositoryForLessons);
+export const lessonService = new LessonService(
+  lessonRepository,
+  courseRepositoryForLessons,
+  (userId, courseId) => enrollmentService.hasAccess(userId, courseId, false),
+);

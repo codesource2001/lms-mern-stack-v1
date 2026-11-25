@@ -9,6 +9,7 @@ import {
   validateCourseIdParams,
   validateCreateAnnouncement,
 } from './announcement.validation.js';
+import { mutatingLimiter } from '../../middlewares/endpoint-rate-limit.js';
 
 export function createAnnouncementRouter() {
   const router = Router();
@@ -17,6 +18,7 @@ export function createAnnouncementRouter() {
     '/',
     requireAuth,
     requirePermission(PERMISSIONS.COURSES_WRITE),
+    mutatingLimiter,
     validateCreateAnnouncement,
     announcementController.create,
   );
@@ -32,6 +34,7 @@ export function createAnnouncementRouter() {
     '/:id',
     requireAuth,
     requirePermission(PERMISSIONS.COURSES_WRITE),
+    mutatingLimiter,
     validateAnnouncementIdParams,
     announcementController.remove,
   );

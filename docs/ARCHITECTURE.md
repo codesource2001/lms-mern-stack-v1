@@ -2,8 +2,8 @@
 
 | Field    | Value                                            |
 | -------- | ------------------------------------------------ |
-| Status   | Phase 2 baseline — accepted                      |
-| Updated  | 24 November 2026                                 |
+| Status   | Phase 13 baseline — accepted                     |
+| Updated  | 25 November 2026                                 |
 | Scope    | Repository, applications, persistence, contracts |
 | Audience | Maintainers, reviewers, AI agents                |
 

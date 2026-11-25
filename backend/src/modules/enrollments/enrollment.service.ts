@@ -1,4 +1,5 @@
 import { AppError } from '../../shared/errors/app-error.js';
+import { auditService, noOpAudit, type AuditService } from '../audit/audit.service.js';
 import { CourseRepository } from '../courses/course.repository.js';
 import { toCourseRecord } from '../courses/course.model.js';
 import { LessonRepository } from '../lessons/lesson.repository.js';
@@ -10,6 +11,7 @@ export class EnrollmentService {
     private readonly enrollments: EnrollmentRepository,
     private readonly courses: CourseRepository,
     private readonly lessons: LessonRepository,
+    private readonly audit: AuditService = noOpAudit,
   ) {}
 
   async enroll(userId: string, courseId: string) {
@@ -127,7 +129,7 @@ export class EnrollmentService {
     return this.enrollments.listActiveUserIdsByCourse(courseId, limit);
   }
 
-  async revoke(id: string) {
+  async revoke(id: string, actorId: string) {
     const enrollment = await this.enrollments.findById(id);
 
     if (enrollment === null) {
@@ -140,10 +142,18 @@ export class EnrollmentService {
       throw new AppError('Enrollment not found', { statusCode: 404, code: 'NOT_FOUND' });
     }
 
+    await this.audit.record({
+      actorUserId: actorId,
+      action: 'enrollment.revoked',
+      result: 'success',
+      targetType: 'enrollment',
+      targetId: id,
+    });
+
     return toEnrollmentRecord(updated);
   }
 
-  async activate(id: string) {
+  async activate(id: string, actorId: string) {
     const enrollment = await this.enrollments.findById(id);
 
     if (enrollment === null) {
@@ -155,6 +165,14 @@ export class EnrollmentService {
     if (updated === null) {
       throw new AppError('Enrollment not found', { statusCode: 404, code: 'NOT_FOUND' });
     }
+
+    await this.audit.record({
+      actorUserId: actorId,
+      action: 'enrollment.activated',
+      result: 'success',
+      targetType: 'enrollment',
+      targetId: id,
+    });
 
     return toEnrollmentRecord(updated);
   }
@@ -176,4 +194,5 @@ export const enrollmentService = new EnrollmentService(
   enrollmentRepository,
   courseRepositoryForEnrollments,
   lessonRepositoryForEnrollments,
+  auditService,
 );

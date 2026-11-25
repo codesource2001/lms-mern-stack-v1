@@ -176,7 +176,11 @@ function makeFixture() {
     },
   };
 
-  const service = new QuizService(quizRepository as never, courseRepository as never);
+  const service = new QuizService(
+    quizRepository as never,
+    courseRepository as never,
+    async () => true,
+  );
 
   async function seedBank(courseId = COURSE_ID) {
     return quizRepository.createBank({
@@ -214,6 +218,8 @@ function makeFixture() {
 
   return {
     service,
+    quizRepository,
+    courseRepository,
     banks,
     questions,
     quizzes,
@@ -290,6 +296,21 @@ describe('QuizService', () => {
     await expect(
       fixture.service.startAttempt(quiz._id.toString(), STUDENT_ID),
     ).rejects.toMatchObject({ statusCode: 404, code: 'NOT_FOUND' });
+  });
+
+  it('rejects an attempt when the learner has no access to the course', async () => {
+    const fixture = makeFixture();
+    const quiz = await fixture.seedQuiz();
+    const restricted = new QuizService(
+      fixture.quizRepository as never,
+      fixture.courseRepository as never,
+      async () => false,
+    );
+
+    await expect(restricted.startAttempt(quiz._id.toString(), STUDENT_ID)).rejects.toMatchObject({
+      statusCode: 403,
+      code: 'FORBIDDEN',
+    });
   });
 
   it('enforces the attempt limit', async () => {

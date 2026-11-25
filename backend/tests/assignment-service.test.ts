@@ -154,6 +154,7 @@ function makeFixture() {
     assignmentRepository as never,
     submissionRepository as never,
     courseRepository as never,
+    async () => true,
   );
 
   async function seedAssignment(input: {
@@ -174,7 +175,15 @@ function makeFixture() {
     return assignment;
   }
 
-  return { service, assignments, submissions, seedAssignment };
+  return {
+    service,
+    assignmentRepository,
+    submissionRepository,
+    courseRepository,
+    assignments,
+    submissions,
+    seedAssignment,
+  };
 }
 
 describe('AssignmentService', () => {
@@ -272,6 +281,26 @@ describe('AssignmentService', () => {
 
     expect(late.isLate).toBe(true);
     expect(onTime.isLate).toBe(false);
+  });
+
+  it('rejects a submission from a learner without course access', async () => {
+    const fixture = makeFixture();
+    const assignment = await fixture.seedAssignment({ title: 'Gated task', status: 'published' });
+    const restricted = new AssignmentService(
+      fixture.assignmentRepository as never,
+      fixture.submissionRepository as never,
+      fixture.courseRepository as never,
+      async () => false,
+    );
+
+    await expect(
+      restricted.submit({
+        assignmentId: assignment._id.toString(),
+        userId: STUDENT_ID,
+        fileKey: null,
+        content: 'Unauthorized',
+      }),
+    ).rejects.toMatchObject({ statusCode: 403, code: 'FORBIDDEN' });
   });
 
   it('increments the submission version when a learner resubmits', async () => {

@@ -8,18 +8,29 @@ import {
   validateNotificationQuery,
   validatePreferences,
 } from './notification.validation.js';
+import { analyticsLimiter, mutatingLimiter } from '../../middlewares/endpoint-rate-limit.js';
 
 export function createNotificationRouter() {
   const router = Router();
 
   router.use(requireAuth, requirePermission(PERMISSIONS.NOTIFICATIONS_READ));
 
-  router.get('/', validateNotificationQuery, notificationController.list);
-  router.get('/unread-count', notificationController.unreadCount);
-  router.get('/preferences', notificationController.getPreferences);
-  router.patch('/preferences', validatePreferences, notificationController.updatePreferences);
-  router.post('/read-all', notificationController.markAllRead);
-  router.post('/:id/read', validateNotificationId, notificationController.markRead);
+  router.get('/', analyticsLimiter, validateNotificationQuery, notificationController.list);
+  router.get('/unread-count', analyticsLimiter, notificationController.unreadCount);
+  router.get('/preferences', analyticsLimiter, notificationController.getPreferences);
+  router.patch(
+    '/preferences',
+    mutatingLimiter,
+    validatePreferences,
+    notificationController.updatePreferences,
+  );
+  router.post('/read-all', mutatingLimiter, notificationController.markAllRead);
+  router.post(
+    '/:id/read',
+    mutatingLimiter,
+    validateNotificationId,
+    notificationController.markRead,
+  );
 
   return router;
 }

@@ -17,12 +17,12 @@ export function createEnrollmentController() {
   };
 
   const revoke: RequestHandler = async (req, res) => {
-    const enrollment = await enrollmentService.revoke(req.params.id as string);
+    const enrollment = await enrollmentService.revoke(req.params.id as string, req.auth!.userId);
     sendSuccess(res, { message: 'Enrollment revoked', data: { enrollment } });
   };
 
   const activate: RequestHandler = async (req, res) => {
-    const enrollment = await enrollmentService.activate(req.params.id as string);
+    const enrollment = await enrollmentService.activate(req.params.id as string, req.auth!.userId);
     sendSuccess(res, { message: 'Enrollment activated', data: { enrollment } });
   };
 

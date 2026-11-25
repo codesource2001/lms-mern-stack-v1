@@ -4,6 +4,8 @@ import { requireAuth, requirePermission } from '../auth/auth.middleware.js';
 import { PERMISSIONS } from '../rbac/rbac.catalog.js';
 import { enrollmentController } from './enrollment.controller.js';
 import { validateEnroll } from './enrollment.validation.js';
+import { mutatingLimiter } from '../../middlewares/endpoint-rate-limit.js';
+import { validateIdParam } from '../../middlewares/validate-id.js';
 
 export function createEnrollmentRouter() {
   const router = Router();
@@ -12,6 +14,7 @@ export function createEnrollmentRouter() {
     '/',
     requireAuth,
     requirePermission(PERMISSIONS.ENROLLMENTS_CREATE),
+    mutatingLimiter,
     validateEnroll,
     enrollmentController.enroll,
   );
@@ -25,12 +28,16 @@ export function createEnrollmentRouter() {
     '/:id/revoke',
     requireAuth,
     requirePermission(PERMISSIONS.ENROLLMENTS_MANAGE),
+    mutatingLimiter,
+    validateIdParam('id'),
     enrollmentController.revoke,
   );
   router.post(
     '/:id/activate',
     requireAuth,
     requirePermission(PERMISSIONS.ENROLLMENTS_MANAGE),
+    mutatingLimiter,
+    validateIdParam('id'),
     enrollmentController.activate,
   );
 

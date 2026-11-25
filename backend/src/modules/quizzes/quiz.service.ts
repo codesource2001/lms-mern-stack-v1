@@ -1,11 +1,15 @@
 import { AppError } from '../../shared/errors/app-error.js';
+import { auditService, noOpAudit, type AuditService } from '../audit/audit.service.js';
 import { CourseRepository } from '../courses/course.repository.js';
+import { enrollmentService } from '../enrollments/enrollment.service.js';
 import { QuizRepository } from './quiz.repository.js';
 
 export class QuizService {
   constructor(
     private readonly quizzes: QuizRepository,
     private readonly courses: CourseRepository,
+    private readonly canAccess: (userId: string, courseId: string) => Promise<boolean>,
+    private readonly audit: AuditService = noOpAudit,
   ) {}
 
   async createBank(input: { title: string; courseId: string; actorId: string; isAdmin: boolean }) {
@@ -131,6 +135,13 @@ export class QuizService {
 
     if (quiz === null || quiz.status !== 'published') {
       throw new AppError('Quiz not found', { statusCode: 404, code: 'NOT_FOUND' });
+    }
+
+    if (!(await this.canAccess(userId, quiz.course.toString()))) {
+      throw new AppError('You do not have permission to perform this action', {
+        statusCode: 403,
+        code: 'FORBIDDEN',
+      });
     }
 
     const attempts = await this.quizzes.countAttempts(quizId, userId);
@@ -319,10 +330,24 @@ export class QuizService {
       });
     }
 
+    await this.audit.record({
+      actorUserId: actorId,
+      action: 'quiz_attempt.graded',
+      result: 'success',
+      targetType: 'quiz_attempt',
+      targetId: attemptId,
+      metadata: { score },
+    });
+
     return this.quizzes.gradeAttempt(attemptId, score, attempt.maxScore ?? 0, 'graded');
   }
 }
 
 export const quizRepository = new QuizRepository();
 export const courseRepositoryForQuizzes = new CourseRepository();
-export const quizService = new QuizService(quizRepository, courseRepositoryForQuizzes);
+export const quizService = new QuizService(
+  quizRepository,
+  courseRepositoryForQuizzes,
+  (userId, courseId) => enrollmentService.hasAccess(userId, courseId, false),
+  auditService,
+);

@@ -9,6 +9,8 @@ import {
   validateSubmission,
   validateGrade,
 } from './assignment.validation.js';
+import { mutatingLimiter, uploadLimiter } from '../../middlewares/endpoint-rate-limit.js';
+import { validateIdParam } from '../../middlewares/validate-id.js';
 
 export function createAssignmentRouter() {
   const router = Router();
@@ -24,12 +26,15 @@ export function createAssignmentRouter() {
     '/course/:courseId',
     requireAuth,
     requirePermission(PERMISSIONS.ASSIGNMENTS_READ),
+    validateIdParam('courseId'),
     assignmentController.list,
   );
   router.post(
     '/course/:courseId',
     requireAuth,
     requirePermission(PERMISSIONS.ASSIGNMENTS_WRITE),
+    mutatingLimiter,
+    validateIdParam('courseId'),
     validateAssignmentCreate,
     assignmentController.create,
   );
@@ -38,12 +43,15 @@ export function createAssignmentRouter() {
     '/:id/submissions',
     requireAuth,
     requirePermission(PERMISSIONS.ASSIGNMENTS_GRADE),
+    validateIdParam('id'),
     assignmentController.submissions,
   );
   router.post(
     '/:id/submit',
     requireAuth,
     requirePermission(PERMISSIONS.ASSIGNMENTS_SUBMIT),
+    uploadLimiter,
+    validateIdParam('id'),
     upload.single('file'),
     validateSubmission,
     assignmentController.submit,
@@ -52,12 +60,16 @@ export function createAssignmentRouter() {
     '/:id/publish',
     requireAuth,
     requirePermission(PERMISSIONS.ASSIGNMENTS_WRITE),
+    mutatingLimiter,
+    validateIdParam('id'),
     assignmentController.publish,
   );
   router.patch(
     '/:id',
     requireAuth,
     requirePermission(PERMISSIONS.ASSIGNMENTS_WRITE),
+    mutatingLimiter,
+    validateIdParam('id'),
     validateAssignmentUpdate,
     assignmentController.update,
   );
@@ -65,6 +77,8 @@ export function createAssignmentRouter() {
     '/:id',
     requireAuth,
     requirePermission(PERMISSIONS.ASSIGNMENTS_WRITE),
+    mutatingLimiter,
+    validateIdParam('id'),
     assignmentController.remove,
   );
 
@@ -72,6 +86,8 @@ export function createAssignmentRouter() {
     '/submissions/:submissionId/grade',
     requireAuth,
     requirePermission(PERMISSIONS.ASSIGNMENTS_GRADE),
+    mutatingLimiter,
+    validateIdParam('submissionId'),
     validateGrade,
     assignmentController.grade,
   );

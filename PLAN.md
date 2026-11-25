@@ -15,8 +15,8 @@ This file is the executable roadmap. The original product brief is preserved ver
 
 | Field           | Value                                                                    |
 | --------------- | ------------------------------------------------------------------------ |
-| Current phase   | **Phase 12 — complete**                                                  |
-| Next phase      | **Phase 13 — security audit and optimization**                           |
+| Current phase   | **Phase 13 — complete**                                                  |
+| Next phase      | **Phase 14 — testing and Docker deployment**                             |
 | Last verified   | 25 November 2026                                                         |
 | Runtime         | Node.js 24.14.1, npm 11.12.1, Docker 29.8.1                              |
 | Apps            | `frontend/` (`@atrium/frontend`), `backend/` (`@atrium/backend`)         |
@@ -652,20 +652,49 @@ Remediation (2026-11-25): quiz service tests cover attempt limits, server-author
 
 **Depends on:** All feature phases.
 
-- [ ] Threat-model review against OWASP ASVS/Top 10 and broken object-level authorization
-- [ ] Verify every route has validation, authentication, permission, and rate-limit coverage
-- [ ] Test IDOR/BOLA across courses, lessons, submissions, exams, certificates, and files
-- [ ] Review token/session lifecycle, cookie flags, CSRF, and XSS surfaces
-- [ ] Dependency audit and upgrade review
-- [ ] Log redaction and audit-log completeness review
-- [ ] MongoDB index and slow-query review
-- [ ] Frontend bundle analysis, route splitting, image optimization, and caching review
-- [ ] Redis cache review: only justified caches, explicit invalidation
-- [ ] Security headers and CSP review for the production frontend
-- [ ] Penetration-style test additions and regression tests
-- [ ] Update `SECURITY.md` with final controls and residual risks
+- [x] Threat-model review against OWASP ASVS/Top 10 and broken object-level authorization
+- [x] Verify every route has validation, authentication, permission, and rate-limit coverage
+- [x] Test IDOR/BOLA across courses, lessons, submissions, exams, certificates, and files
+- [x] Review token/session lifecycle, cookie flags, CSRF, and XSS surfaces
+- [x] Dependency audit and upgrade review
+- [x] Log redaction and audit-log completeness review
+- [x] MongoDB index and slow-query review
+- [x] Frontend bundle analysis, route splitting, image optimization, and caching review
+- [x] Redis cache review: only justified caches, explicit invalidation
+- [~] Security headers and CSP review for the production frontend (reviewed; static-host CSP is deployment work in Phase 14)
+- [x] Penetration-style test additions and regression tests
+- [x] Update `SECURITY.md` with final controls and residual risks
 
-**Acceptance:** No high/critical findings without a documented, accepted mitigation; authorization matrix is test-backed; performance budgets are recorded.
+### Phase 13 verification evidence
+
+| Check                 | Command / action        | Result                                     |
+| --------------------- | ----------------------- | ------------------------------------------ |
+| Format                | `npm run format:check`  | Pass                                       |
+| Lint                  | `npm run lint`          | Pass, 10 pre-existing frontend warnings    |
+| Typecheck             | `npm run typecheck`     | Pass, both workspaces                      |
+| Tests                 | `npm run test`          | 175 tests pass (163 backend, 12 frontend)  |
+| Build                 | `npm run build`         | Pass                                       |
+| Compose configuration | `docker compose config` | Pass                                       |
+| Dependency audit      | `npm audit`             | 0 vulnerabilities (all dependency classes) |
+
+Full findings, route matrix, OWASP mapping, and performance budgets: [`docs/SECURITY-AUDIT.md`](docs/SECURITY-AUDIT.md).
+
+### Phase 13 decisions and known constraints
+
+- **High-severity access gaps were fixed, not deferred.** Lesson completion, published lesson assets, assignment submission, and quiz starts now verify course access server-side.
+- **All id-bearing routes now validate params** with a shared middleware; malformed IDs return `422`.
+- **Sensitive endpoints have endpoint-specific limits** in addition to the global limiter; the public certificate verification endpoint is capped at 60 requests per 15 minutes.
+- **Audit coverage expanded** to enrollment state changes, grading, and announcements using a non-fatal audit port that defaults to a no-op in unit tests.
+- **Rate limiting remains per-process**, the worker remains in-process, and retry jitter is absent; these are accepted residuals recorded in the audit report.
+- **SPA CSP remains deployment work** because the static host is not configured until Phase 14.
+- **TypeScript 7 remains blocked** by `typescript-eslint` support (ADR-0003); only patch/minor drift was observed.
+- **Performance budgets recorded:** initial JS ≤ 150 kB gzip (126.26 measured), initial CSS ≤ 15 kB gzip (8.66), largest lazy route ≤ 150 kB gzip (124.81 dashboard).
+
+**Acceptance criteria - verified**
+
+- No high or critical finding remains without a documented, accepted mitigation.
+- The authorization matrix is test-backed: 18 protected routes return `401`, permission failures return `403`, malformed params return `422`, and public verification abuse returns `429`.
+- Performance budgets are recorded in `docs/SECURITY-AUDIT.md`.
 
 ---
 
@@ -776,6 +805,7 @@ Tracked for resolution in the phase that needs them:
 
 | Date       | Change                                                                                    |
 | ---------- | ----------------------------------------------------------------------------------------- |
+| 2026-11-25 | Phase 13 complete: security audit, access fixes, route limits, 175 tests.                 |
 | 2026-11-25 | Phase 12 complete: notifications, jobs, announcements, analytics, dashboards, 166 tests.  |
 | 2026-11-25 | Phase 9/10 remediation: admin overrides wired, 28 tests added, 139 total.                 |
 | 2026-11-25 | Phase 11 complete: certificate issuance, verification, PDF, revocation, 111 tests.        |

@@ -8,16 +8,28 @@ import {
   validateIssueCertificateForUser,
   validateRevokeCertificate,
 } from './certificate.validation.js';
+import {
+  analyticsLimiter,
+  mutatingLimiter,
+  publicReadLimiter,
+} from '../../middlewares/endpoint-rate-limit.js';
+import { validateIdParam } from '../../middlewares/validate-id.js';
 
 export function createCertificateRouter() {
   const router = Router();
 
-  router.get('/verify/:certificateId', certificateController.verify);
+  router.get(
+    '/verify/:certificateId',
+    publicReadLimiter,
+    validateIdParam('certificateId'),
+    certificateController.verify,
+  );
 
   router.post(
     '/',
     requireAuth,
     requirePermission(PERMISSIONS.CERTIFICATES_READ),
+    mutatingLimiter,
     validateIssueCertificate,
     certificateController.issue,
   );
@@ -25,6 +37,7 @@ export function createCertificateRouter() {
     '/issue',
     requireAuth,
     requirePermission(PERMISSIONS.CERTIFICATES_ISSUE),
+    mutatingLimiter,
     validateIssueCertificateForUser,
     certificateController.issueForUser,
   );
@@ -38,6 +51,8 @@ export function createCertificateRouter() {
     '/:certificateId/revoke',
     requireAuth,
     requirePermission(PERMISSIONS.CERTIFICATES_ISSUE),
+    mutatingLimiter,
+    validateIdParam('certificateId'),
     validateRevokeCertificate,
     certificateController.revoke,
   );
@@ -45,6 +60,8 @@ export function createCertificateRouter() {
     '/:certificateId/pdf',
     requireAuth,
     requirePermission(PERMISSIONS.CERTIFICATES_READ),
+    analyticsLimiter,
+    validateIdParam('certificateId'),
     certificateController.pdf,
   );
 

@@ -1,5 +1,7 @@
 import { AppError } from '../../shared/errors/app-error.js';
+import { auditService, noOpAudit, type AuditService } from '../audit/audit.service.js';
 import { CourseRepository } from '../courses/course.repository.js';
+import { enrollmentService } from '../enrollments/enrollment.service.js';
 import { AssignmentRepository, SubmissionRepository } from './assignment.repository.js';
 import { toAssignmentRecord } from './assignment.model.js';
 import { toSubmissionRecord } from './submission.model.js';
@@ -9,6 +11,8 @@ export class AssignmentService {
     private readonly assignments: AssignmentRepository,
     private readonly submissions: SubmissionRepository,
     private readonly courses: CourseRepository,
+    private readonly canAccess: (userId: string, courseId: string) => Promise<boolean>,
+    private readonly audit: AuditService = noOpAudit,
   ) {}
 
   async listByCourse(courseId: string, actorId: string, isAdmin: boolean) {
@@ -138,6 +142,13 @@ export class AssignmentService {
       throw new AppError('Course not found', { statusCode: 404, code: 'NOT_FOUND' });
     }
 
+    if (!(await this.canAccess(input.userId, assignment.course.toString()))) {
+      throw new AppError('You do not have permission to perform this action', {
+        statusCode: 403,
+        code: 'FORBIDDEN',
+      });
+    }
+
     const existing = await this.submissions.findLatest(input.assignmentId, input.userId);
     const version = existing === null ? 1 : existing.version + 1;
     const isLate = assignment.dueAt !== null && assignment.dueAt.getTime() < Date.now();
@@ -221,6 +232,15 @@ export class AssignmentService {
       throw new AppError('Submission not found', { statusCode: 404, code: 'NOT_FOUND' });
     }
 
+    await this.audit.record({
+      actorUserId: actorId,
+      action: 'submission.graded',
+      result: 'success',
+      targetType: 'submission',
+      targetId: submissionId,
+      metadata: { grade: input.grade },
+    });
+
     return toSubmissionRecord(updated);
   }
 }
@@ -232,4 +252,6 @@ export const assignmentService = new AssignmentService(
   assignmentRepository,
   submissionRepository,
   courseRepositoryForAssignments,
+  (userId, courseId) => enrollmentService.hasAccess(userId, courseId, false),
+  auditService,
 );
