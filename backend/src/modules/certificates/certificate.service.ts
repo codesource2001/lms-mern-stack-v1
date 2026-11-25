@@ -196,6 +196,14 @@ export class CertificateService {
 
     return toCertificateRecord(updated);
   }
+
+  async getAnalytics() {
+    return this.certificates.analyticsCounts();
+  }
+
+  async countActiveForUser(userId: string): Promise<number> {
+    return this.certificates.countActiveByUser(userId);
+  }
 }
 
 export const certificateRepository = new CertificateRepository();

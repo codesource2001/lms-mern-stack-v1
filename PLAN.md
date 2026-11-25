@@ -15,8 +15,8 @@ This file is the executable roadmap. The original product brief is preserved ver
 
 | Field           | Value                                                                    |
 | --------------- | ------------------------------------------------------------------------ |
-| Current phase   | **Phase 11 — complete**                                                  |
-| Next phase      | **Phase 12 — notifications and analytics**                               |
+| Current phase   | **Phase 12 — complete**                                                  |
+| Next phase      | **Phase 13 — security audit and optimization**                           |
 | Last verified   | 25 November 2026                                                         |
 | Runtime         | Node.js 24.14.1, npm 11.12.1, Docker 29.8.1                              |
 | Apps            | `frontend/` (`@atrium/frontend`), `backend/` (`@atrium/backend`)         |
@@ -601,21 +601,50 @@ Remediation (2026-11-25): quiz service tests cover attempt limits, server-author
 
 **Depends on:** Phases 3–11.
 
-- [ ] `Notification` model with read/unread indexes
-- [ ] In-app notification center and real-time or polling strategy
-- [ ] Email provider integration with retries and delivery status
-- [ ] Course announcements
-- [ ] Assignment deadline and exam reminders via background jobs
-- [ ] Notification preferences
-- [ ] Admin analytics: users, active students, instructors, courses, enrollments, revenue, completion rates
-- [ ] Instructor analytics: course performance, student progress, grading load
-- [ ] Student analytics: progress, grades, upcoming work
-- [ ] Recharts dashboards with accessible summaries
-- [ ] Aggregation pipelines with indexes and result limits
-- [ ] Job and analytics tests
-- [ ] Docs and OpenAPI updates
+- [x] `Notification` model with read/unread indexes
+- [x] In-app notification center and polling strategy (60-second TanStack Query polling)
+- [x] Email provider integration with retries and delivery status
+- [~] Course announcements (API, authorization, and idempotent fan-out job implemented; course-specific UI deferred)
+- [~] Assignment deadline and exam reminders via background jobs (assignment reminders implemented; quiz reminders deferred because quizzes have no scheduling fields)
+- [x] Notification preferences
+- [x] Admin analytics: users, active students, instructors, courses, enrollments, revenue, completion rates
+- [x] Instructor analytics: course performance, student progress, grading load
+- [x] Student analytics: progress, grades, upcoming work
+- [x] Recharts dashboards with accessible summaries
+- [x] Aggregation pipelines with indexes and result limits
+- [x] Job and analytics tests
+- [x] Docs and OpenAPI updates
 
-**Acceptance:** Jobs are idempotent and retryable; notifications respect preferences; analytics queries are bounded and indexed.
+### Phase 12 verification evidence
+
+| Check                 | Command / action        | Result                                    |
+| --------------------- | ----------------------- | ----------------------------------------- |
+| Format                | `npm run format:check`  | Pass                                      |
+| Lint                  | `npm run lint`          | Pass, 10 pre-existing frontend warnings   |
+| Typecheck             | `npm run typecheck`     | Pass, both workspaces                     |
+| Tests                 | `npm run test`          | 166 tests pass (154 backend, 12 frontend) |
+| Build                 | `npm run build`         | Pass                                      |
+| Compose configuration | `docker compose config` | Pass                                      |
+| Dependency audit      | `npm audit --omit=dev`  | 0 vulnerabilities                         |
+
+### Phase 12 decisions and known constraints
+
+- **Job runner is in-process and Redis-backed.** BullMQ could not be version-verified in this environment (`ENOTFOUND` on the registry), so a small durable queue was implemented with the pinned `redis` client. See [ADR-0005](docs/adr/0005-background-jobs.md).
+- **Jobs are idempotent by deterministic ID.** Enqueue is a no-op when the ID exists; reminder and fan-out keys are derived from the source entity and recipient. Failures retry with exponential backoff and dead-letter after the attempt limit.
+- **Workers run inside the API process** behind `JOBS_WORKER_ENABLED` (off in tests). A dedicated worker process is Phase 14 work.
+- **Email delivery is observable.** Each notification stores `emailStatus`, attempts, last error, and sent timestamp. Delivery failures rethrow so the job retries.
+- **Announcement fan-out is in-app only.** Even when a learner enables announcement email, Phase 12 fan-out does not create email jobs to avoid bulk mail without rate limiting.
+- **Quiz reminders are not implemented.** The quiz model has no availability window or due date; only assignment deadline reminders run.
+- **Revenue is enrollment value, not settled payments.** Payment processing does not exist; `pricePaidCents` is currently zero for all enrollments. Analytics reports gross cents grouped by course currency.
+- **Students now have `analytics:read`.** The role must be re-seeded (`npm run seed`) so existing deployments pick up the permission.
+- **Student upcoming work covers assignments only.** Quizzes have no scheduling fields, so they are not listed as upcoming.
+- **Analytics aggregates are bounded.** Top courses and per-course results are capped at 100, trend at 12 months, upcoming assignments at 10, and notification pages at 100.
+
+**Acceptance criteria - verified**
+
+- Jobs are idempotent and retryable: deterministic IDs, lease recovery, backoff, and dead-lettering are covered by worker tests.
+- Notifications respect preferences: in-app opt-out and email opt-out are covered by service tests.
+- Analytics queries are bounded and indexed: aggregation limits and existing collection indexes are used; role scoping is covered by service tests.
 
 ---
 
@@ -747,6 +776,7 @@ Tracked for resolution in the phase that needs them:
 
 | Date       | Change                                                                                    |
 | ---------- | ----------------------------------------------------------------------------------------- |
+| 2026-11-25 | Phase 12 complete: notifications, jobs, announcements, analytics, dashboards, 166 tests.  |
 | 2026-11-25 | Phase 9/10 remediation: admin overrides wired, 28 tests added, 139 total.                 |
 | 2026-11-25 | Phase 11 complete: certificate issuance, verification, PDF, revocation, 111 tests.        |
 | 2026-11-25 | Phase 10 complete: quiz and examination backend.                                          |

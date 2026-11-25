@@ -34,6 +34,16 @@ export class AssignmentRepository {
     });
   }
 
+  async listPublishedDueBetween(from: Date, to: Date, limit: number) {
+    return AssignmentModel.find({
+      status: 'published',
+      dueAt: { $gte: from, $lte: to },
+    })
+      .sort({ dueAt: 1 })
+      .limit(limit)
+      .lean() as Promise<Array<AssignmentDocument & { _id: Types.ObjectId }>>;
+  }
+
   async update(id: string, input: Record<string, unknown>) {
     return AssignmentModel.findByIdAndUpdate(
       id,
@@ -48,6 +58,53 @@ export class AssignmentRepository {
 }
 
 export class SubmissionRepository {
+  async countUngradedByCourse(courseId: string): Promise<number> {
+    const rows = await SubmissionModel.aggregate<{ count: number }>([
+      {
+        $lookup: {
+          from: 'assignments',
+          localField: 'assignment',
+          foreignField: '_id',
+          as: 'assignmentDoc',
+        },
+      },
+      { $unwind: '$assignmentDoc' },
+      { $match: { 'assignmentDoc.course': new Types.ObjectId(courseId), status: 'submitted' } },
+      { $count: 'count' },
+    ]);
+
+    return rows[0]?.count ?? 0;
+  }
+
+  async gradeStatsForUser(userId: string) {
+    const rows = await SubmissionModel.aggregate<{
+      graded: number;
+      score: number;
+      maxScore: number;
+    }>([
+      { $match: { user: new Types.ObjectId(userId), grade: { $ne: null } } },
+      {
+        $lookup: {
+          from: 'assignments',
+          localField: 'assignment',
+          foreignField: '_id',
+          as: 'assignmentDoc',
+        },
+      },
+      { $unwind: '$assignmentDoc' },
+      {
+        $group: {
+          _id: null,
+          graded: { $sum: 1 },
+          score: { $sum: '$grade' },
+          maxScore: { $sum: '$assignmentDoc.maxScore' },
+        },
+      },
+    ]);
+
+    return rows[0] ?? { graded: 0, score: 0, maxScore: 0 };
+  }
+
   async findById(id: string) {
     return SubmissionModel.findById(id).lean() as Promise<
       (SubmissionDocument & { _id: Types.ObjectId }) | null

@@ -1,5 +1,6 @@
 import { AppError } from '../../shared/errors/app-error.js';
 import { createOpaqueToken, hashOpaqueToken } from '../../shared/security/opaque-token.js';
+import { rbacService } from '../rbac/rbac.service.js';
 import {
   UserRepository,
   type UserRecord,
@@ -229,6 +230,15 @@ export class UserService {
 
   async incrementTokenVersion(id: string): Promise<void> {
     await this.repository.incrementTokenVersion(id);
+  }
+
+  async getAnalytics() {
+    return this.repository.analyticsCounts();
+  }
+
+  async countActiveByRoleSlug(slug: string): Promise<number> {
+    const role = await rbacService.getRoleBySlug(slug);
+    return role === null ? 0 : this.repository.countActiveByRoleId(role.id);
   }
 }
 

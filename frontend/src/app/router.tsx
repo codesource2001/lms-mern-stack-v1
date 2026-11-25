@@ -32,6 +32,16 @@ const ResetPasswordPage = lazy(() =>
     default: module.ResetPasswordPage,
   })),
 );
+const DashboardPage = lazy(() =>
+  import('@/features/analytics/pages/dashboard-page').then((module) => ({
+    default: module.DashboardPage,
+  })),
+);
+const NotificationsPage = lazy(() =>
+  import('@/features/notifications/pages/notifications-page').then((module) => ({
+    default: module.NotificationsPage,
+  })),
+);
 
 function Lazy({ children }: { children: ReactNode }) {
   return (
@@ -108,9 +118,21 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: (
-          <div className="text-sm text-muted-foreground">
-            Dashboard placeholder. Domain features arrive in later phases.
-          </div>
+          <ProtectedRoute permission="analytics:read">
+            <Lazy>
+              <DashboardPage />
+            </Lazy>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'notifications',
+        element: (
+          <ProtectedRoute permission="notifications:read">
+            <Lazy>
+              <NotificationsPage />
+            </Lazy>
+          </ProtectedRoute>
         ),
       },
       {

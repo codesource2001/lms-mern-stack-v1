@@ -12,6 +12,9 @@ import { createEnrollmentRouter } from '../modules/enrollments/enrollment.routes
 import { createAssignmentRouter } from '../modules/assignments/assignment.routes.js';
 import { createQuizRouter } from '../modules/quizzes/quiz.routes.js';
 import { createCertificateRouter } from '../modules/certificates/certificate.routes.js';
+import { createAnnouncementRouter } from '../modules/announcements/announcement.routes.js';
+import { createNotificationRouter } from '../modules/notifications/notification.routes.js';
+import { createAnalyticsRouter } from '../modules/analytics/analytics.routes.js';
 
 export function createApiRouter(options: { authService?: AuthService } = {}): Router {
   const router = Router();
@@ -36,6 +39,9 @@ export function createApiRouter(options: { authService?: AuthService } = {}): Ro
   router.use('/assignments', createAssignmentRouter());
   router.use('/quizzes', createQuizRouter());
   router.use('/certificates', createCertificateRouter());
+  router.use('/announcements', createAnnouncementRouter());
+  router.use('/notifications', createNotificationRouter());
+  router.use('/analytics', createAnalyticsRouter());
 
   return router;
 }

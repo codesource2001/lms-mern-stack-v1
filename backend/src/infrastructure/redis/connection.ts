@@ -81,6 +81,14 @@ export async function disconnectRedis(): Promise<void> {
   }
 }
 
+export function getRedisClient(): RedisClientType {
+  if (client === null || !client.isReady) {
+    throw new Error('Redis is not connected');
+  }
+
+  return client;
+}
+
 export async function checkRedis(timeoutMs: number): Promise<DependencyCheck> {
   const startedAt = performance.now();
 

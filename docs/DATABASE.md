@@ -116,6 +116,21 @@ const enrollmentSchema = applySoftDelete(createBaseSchema({ ... }));
 
 Helper functions `markDeleted()`, `restoreDeleted()`, and `isDeleted()` keep the field handling consistent.
 
+### Notification and analytics indexes
+
+Phase 12 adds these query-driven indexes:
+
+| Collection                 | Index                                     | Purpose                                     |
+| -------------------------- | ----------------------------------------- | ------------------------------------------- |
+| `notifications`            | `{ user: 1, createdAt: -1 }`              | Newest-first notification center            |
+| `notifications`            | `{ user: 1, readAt: 1, createdAt: -1 }`   | Unread-only page with bounded sort          |
+| `notifications`            | `{ user: 1, dedupeKey: 1 }` unique/sparse | One notification per reminder/fan-out event |
+| `notifications`            | `{ emailStatus: 1, createdAt: 1 }`        | Delivery state inspection                   |
+| `notification_preferences` | `{ user: 1 }` unique                      | One preference document per user            |
+| `announcements`            | `{ course: 1, publishedAt: -1 }`          | Course announcement pages                   |
+
+Aggregations used by analytics are bounded with `$limit` (top courses 100, trend 12 months, upcoming work 20) and read through domain service methods; the analytics module does not import another module's model or repository. Revenue is grouped by course currency because cents across currencies cannot be summed.
+
 ---
 
 ## 4. Repository contract
@@ -133,7 +148,7 @@ The dependency direction is `route → controller → service → repository →
 
 ### Why there is no `BaseRepository` yet
 
-Phase 2 has no domain models, so a generic base class would be speculation. A real base repository will be introduced only when at least two repositories share identical, non-trivial query mechanics. Until then, each repository is a small explicit module, and this contract is the shared abstraction.
+There is no generic base repository. Domain repositories share conventions but not identical query mechanics; adding a base class would couple unrelated modules. Each repository is a small explicit module, and this contract is the shared abstraction.
 
 ---
 

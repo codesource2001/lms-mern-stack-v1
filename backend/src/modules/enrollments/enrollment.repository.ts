@@ -22,6 +22,67 @@ export class EnrollmentRepository {
       .lean() as Promise<Array<EnrollmentDocument & { _id: Types.ObjectId }>>;
   }
 
+  async listActiveUserIdsByCourse(courseId: string, limit: number): Promise<string[]> {
+    const documents = (await EnrollmentModel.find({
+      course: new Types.ObjectId(courseId),
+      status: 'active',
+    })
+      .select('user')
+      .limit(limit)
+      .lean()) as Array<Pick<EnrollmentDocument, 'user'>>;
+
+    return documents.map((document) => document.user.toString());
+  }
+
+  async analyticsSummary() {
+    const [total, active, pendingPayment, expired, revoked] = await Promise.all([
+      EnrollmentModel.countDocuments(),
+      EnrollmentModel.countDocuments({ status: 'active' }),
+      EnrollmentModel.countDocuments({ status: 'pending_payment' }),
+      EnrollmentModel.countDocuments({ status: 'expired' }),
+      EnrollmentModel.countDocuments({ status: 'revoked' }),
+    ]);
+
+    const activeUsers = await EnrollmentModel.distinct('user', { status: 'active' });
+
+    const perCourse = await EnrollmentModel.aggregate<{
+      _id: Types.ObjectId;
+      count: number;
+      grossCents: number;
+    }>([
+      { $match: { status: 'active' } },
+      { $group: { _id: '$course', count: { $sum: 1 }, grossCents: { $sum: '$pricePaidCents' } } },
+      { $sort: { count: -1 } },
+      { $limit: 100 },
+    ]);
+
+    const trend = await EnrollmentModel.aggregate<{ _id: string; count: number }>([
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m', date: '$createdAt' } },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: -1 } },
+      { $limit: 12 },
+    ]);
+
+    return {
+      total,
+      active,
+      pendingPayment,
+      expired,
+      revoked,
+      activeStudents: activeUsers.length,
+      activeByCourse: perCourse.map((row) => ({
+        courseId: row._id.toString(),
+        count: row.count,
+        grossCents: row.grossCents,
+      })),
+      trend: trend.reverse().map((row) => ({ month: row._id, count: row.count })),
+    };
+  }
+
   async create(input: {
     userId: string;
     courseId: string;

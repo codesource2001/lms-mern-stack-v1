@@ -118,6 +118,14 @@ export class QuizService {
     return this.quizzes.publishQuiz(id);
   }
 
+  async countPendingManualByCourse(courseId: string): Promise<number> {
+    return this.quizzes.countPendingManualByCourse(courseId);
+  }
+
+  async getGradeStatsForUser(userId: string) {
+    return this.quizzes.gradeStatsForUser(userId);
+  }
+
   async startAttempt(quizId: string, userId: string) {
     const quiz = await this.quizzes.findQuizById(quizId);
 

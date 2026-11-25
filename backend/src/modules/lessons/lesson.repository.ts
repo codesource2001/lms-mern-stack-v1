@@ -65,6 +65,56 @@ export class LessonRepository {
     }
   }
 
+  async lessonCountsByCourse(courseIds: readonly string[]) {
+    if (courseIds.length === 0) {
+      return [];
+    }
+
+    return LessonModel.aggregate<{ _id: Types.ObjectId; count: number }>([
+      { $match: { course: { $in: courseIds.map((id) => new Types.ObjectId(id)) } } },
+      { $group: { _id: '$course', count: { $sum: 1 } } },
+    ]);
+  }
+
+  async completionCountsByCourse(courseIds: readonly string[]) {
+    if (courseIds.length === 0) {
+      return [];
+    }
+
+    return LessonCompletionModel.aggregate<{ _id: Types.ObjectId; count: number }>([
+      {
+        $lookup: {
+          from: 'lessons',
+          localField: 'lesson',
+          foreignField: '_id',
+          as: 'lessonDoc',
+        },
+      },
+      { $unwind: '$lessonDoc' },
+      { $match: { 'lessonDoc.course': { $in: courseIds.map((id) => new Types.ObjectId(id)) } } },
+      { $group: { _id: '$lessonDoc.course', count: { $sum: 1 } } },
+    ]);
+  }
+
+  async userCompletionCountByCourse(userId: string, courseId: string): Promise<number> {
+    const result = await LessonCompletionModel.aggregate<{ count: number }>([
+      { $match: { user: new Types.ObjectId(userId) } },
+      {
+        $lookup: {
+          from: 'lessons',
+          localField: 'lesson',
+          foreignField: '_id',
+          as: 'lessonDoc',
+        },
+      },
+      { $unwind: '$lessonDoc' },
+      { $match: { 'lessonDoc.course': new Types.ObjectId(courseId) } },
+      { $count: 'count' },
+    ]);
+
+    return result[0]?.count ?? 0;
+  }
+
   async markComplete(userId: string, lessonId: string) {
     return LessonCompletionModel.findOneAndUpdate(
       { user: new Types.ObjectId(userId), lesson: new Types.ObjectId(lessonId) },

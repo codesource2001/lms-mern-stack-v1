@@ -9,6 +9,9 @@ import { env } from '../config/env.js';
 import { registerAuthOpenApi } from '../modules/auth/auth.openapi.js';
 import { registerCertificateOpenApi } from '../modules/certificates/certificate.openapi.js';
 import { registerUserOpenApi } from '../modules/users/user.openapi.js';
+import { registerNotificationOpenApi } from '../modules/notifications/notification.openapi.js';
+import { registerAnnouncementOpenApi } from '../modules/announcements/announcement.openapi.js';
+import { registerAnalyticsOpenApi } from '../modules/analytics/analytics.openapi.js';
 
 extendZodWithOpenApi(z);
 
@@ -136,6 +139,9 @@ registry.registerPath({
 registerAuthOpenApi(registry);
 registerUserOpenApi(registry);
 registerCertificateOpenApi(registry);
+registerNotificationOpenApi(registry);
+registerAnnouncementOpenApi(registry);
+registerAnalyticsOpenApi(registry);
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
@@ -145,7 +151,7 @@ export const openApiDocument = generator.generateDocument({
     title: 'Atrium LMS API',
     version: env.APP_VERSION,
     description:
-      'Phase 11 API contract. Authentication, RBAC, catalog, learning, assessments, and certificate issuance are implemented. Domain routes from earlier phases are still being documented.',
+      'Phase 12 API contract. Authentication, RBAC, catalog, learning, assessments, certificates, notifications, announcements, and role-scoped analytics are implemented. Domain routes from earlier phases are still being documented.',
   },
   servers: [{ url: '/', description: 'Current origin' }],
   tags: [
@@ -154,5 +160,11 @@ export const openApiDocument = generator.generateDocument({
     { name: 'Authentication', description: 'Account lifecycle and session management' },
     { name: 'Users', description: 'User management' },
     { name: 'Certificates', description: 'Certificate issuance, verification, and download' },
+    {
+      name: 'Notifications',
+      description: 'In-app notifications, email delivery state, and preferences',
+    },
+    { name: 'Announcements', description: 'Course announcements and notification fan-out' },
+    { name: 'Analytics', description: 'Role-scoped platform, instructor, and learner analytics' },
   ],
 });

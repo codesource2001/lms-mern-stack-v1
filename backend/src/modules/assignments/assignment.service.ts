@@ -112,6 +112,14 @@ export class AssignmentService {
     await this.assignments.delete(id);
   }
 
+  async countUngradedByCourse(courseId: string): Promise<number> {
+    return this.submissions.countUngradedByCourse(courseId);
+  }
+
+  async getGradeStatsForUser(userId: string) {
+    return this.submissions.gradeStatsForUser(userId);
+  }
+
   async submit(input: {
     assignmentId: string;
     userId: string;
@@ -144,6 +152,11 @@ export class AssignmentService {
     });
 
     return toSubmissionRecord(submission);
+  }
+
+  async listPublishedDueBetween(from: Date, to: Date, limit = 100) {
+    const documents = await this.assignments.listPublishedDueBetween(from, to, limit);
+    return documents.map(toAssignmentRecord);
   }
 
   async listSubmissions(assignmentId: string, actorId: string, isAdmin: boolean) {

@@ -54,6 +54,25 @@ export interface FailedLoginUpdate {
 }
 
 export class UserRepository {
+  async analyticsCounts() {
+    const [total, active, suspended, pendingVerification] = await Promise.all([
+      UserModel.countDocuments({ deletedAt: null }),
+      UserModel.countDocuments({ deletedAt: null, status: 'active' }),
+      UserModel.countDocuments({ deletedAt: null, status: 'suspended' }),
+      UserModel.countDocuments({ deletedAt: null, status: 'pending_verification' }),
+    ]);
+
+    return { total, active, suspended, pendingVerification };
+  }
+
+  async countActiveByRoleId(roleId: string): Promise<number> {
+    return UserModel.countDocuments({
+      roles: new Types.ObjectId(roleId),
+      status: 'active',
+      deletedAt: null,
+    });
+  }
+
   async create(input: CreateUserInput): Promise<UserRecord | null> {
     try {
       const document = await UserModel.create({

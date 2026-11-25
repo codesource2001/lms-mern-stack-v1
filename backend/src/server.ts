@@ -4,6 +4,7 @@ import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { connectInfrastructure, disconnectInfrastructure } from './infrastructure/index.js';
+import { startBackgroundJobs } from './jobs/job-handlers.js';
 import { createGracefulShutdown } from './shared/process/graceful-shutdown.js';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
@@ -13,10 +14,14 @@ async function start(): Promise<void> {
 
   const app = createApp();
   const server = createServer(app);
+  const worker = startBackgroundJobs();
 
   const shutdown = createGracefulShutdown({
     server,
-    closeResources: disconnectInfrastructure,
+    closeResources: async () => {
+      await worker?.stop();
+      await disconnectInfrastructure();
+    },
     timeoutMs: SHUTDOWN_TIMEOUT_MS,
     logger,
     exit: (exitCode) => {

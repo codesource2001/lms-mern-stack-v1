@@ -50,6 +50,20 @@ export class CourseService {
     };
   }
 
+  async findById(id: string) {
+    const course = await this.courses.findById(id);
+    return course === null ? null : toCourseRecord(course);
+  }
+
+  async getAnalytics(instructorId?: string) {
+    return this.courses.analyticsCounts(instructorId);
+  }
+
+  async listByIds(ids: readonly string[]) {
+    const courses = await this.courses.findByIds(ids);
+    return courses.map(toCourseRecord);
+  }
+
   async getPublic(idOrSlug: string) {
     const course =
       (await this.courses.findById(idOrSlug)) ?? (await this.courses.findBySlug(idOrSlug));

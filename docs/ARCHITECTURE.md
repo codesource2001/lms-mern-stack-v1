@@ -36,7 +36,7 @@ flowchart LR
   web -->|"JSON over /api/v1<br/>HTTP-only cookies"| api["API<br/>Express 5"]
   api --> mongo[("MongoDB 8.3<br/>system of record")]
   api --> redis[("Redis 8.12<br/>sessions, cache, jobs")]
-  api -.->|planned: Phase 3| email["Email provider"]
+  api -->|"Phase 3 and 12 email"| email["Email provider"]
   api -.->|planned: Phase 6| storage["Object storage"]
   api -.->|planned: Phase 8| payments["Payment provider"]
 ```
@@ -298,17 +298,18 @@ erDiagram
 
 Phase placement:
 
-| Domain                    | Phase | Notes                                              |
-| ------------------------- | ----- | -------------------------------------------------- |
-| User, Role, Permission    | 3     | Identity, RBAC seeds, audit logs                   |
-| Session / RefreshToken    | 3     | Rotation, reuse detection, revocation              |
-| Category, Course, Section | 6     | Publishing state machine, approval, pricing        |
-| Lesson, progress          | 7     | Video/text/PDF, protected asset access, ordering   |
-| Enrollment                | 8     | Unique user+course index, expiry, access policy    |
-| Assignment, Submission    | 9     | Deadlines, versions, grading                       |
-| Quiz, Question, Attempt   | 10    | Server-authoritative timers, deterministic grading |
-| Certificate               | 11    | Non-enumerable IDs, verification, PDF              |
-| Notification              | 12    | Preferences, retries, job runner                   |
+| Domain                     | Phase | Notes                                              |
+| -------------------------- | ----- | -------------------------------------------------- |
+| User, Role, Permission     | 3     | Identity, RBAC seeds, audit logs                   |
+| Session / RefreshToken     | 3     | Rotation, reuse detection, revocation              |
+| Category, Course, Section  | 6     | Publishing state machine, approval, pricing        |
+| Lesson, progress           | 7     | Video/text/PDF, protected asset access, ordering   |
+| Enrollment                 | 8     | Unique user+course index, expiry, access policy    |
+| Assignment, Submission     | 9     | Deadlines, versions, grading                       |
+| Quiz, Question, Attempt    | 10    | Server-authoritative timers, deterministic grading |
+| Certificate                | 11    | Non-enumerable IDs, verification, PDF              |
+| Notification, Announcement | 12    | Preferences, email delivery state, job fan-out     |
+| Analytics read models      | 12    | Role-scoped, bounded aggregations                  |
 
 ---
 
@@ -329,12 +330,12 @@ Detailed connection, schema, repository, and query rules: [`DATABASE.md`](DATABA
 
 ### 7.2 Redis responsibilities
 
-Redis is not a second database. The client is connected with bounded startup and persistent runtime reconnects, but no application cache keys exist yet. It is allowed for:
+Redis is not a second database. The client is connected with bounded startup and persistent runtime reconnects. It holds operational job state for the Phase 12 worker; no application cache keys exist yet. It is allowed for:
 
 - Session and refresh-token metadata where revocation speed matters (Phase 3).
 - Rate-limit and throttling counters across instances (Phase 3/13).
 - Short-lived cache with explicit invalidation and a stated stale tolerance (later phases).
-- Background job queues and scheduled reminders (Phase 12).
+- Background job queues and scheduled reminders (Phase 12, implemented by ADR-0005).
 
 Every cache must answer: what is the key, what is the TTL, what invalidates it, and what happens on a miss or Redis outage. Unbounded or unjustified caching is rejected in review.
 
@@ -442,13 +443,14 @@ Accepted decision records:
 - [ADR-0002 — Authentication token and session strategy](adr/0002-authentication-token-strategy.md)
 - [ADR-0003 — Runtime and toolchain pinning](adr/0003-runtime-and-toolchain.md)
 - [ADR-0004 — Zod-first OpenAPI contracts](adr/0004-zod-first-openapi.md)
+- [ADR-0005 — Background job runner](adr/0005-background-jobs.md)
 
 Open decisions tracked in `PLAN.md`:
 
-1. Email provider and local sink — Phase 3.
-2. Storage provider behind an abstraction — Phase 6.
+1. ~~Email provider and local sink — Phase 3.~~ Implemented; SMTP or development log transport.
+2. Storage provider behind an abstraction — Phase 6 (local provider implemented).
 3. Payment provider and regional requirements — Phase 8.
-4. Background job runner — Phase 12.
+4. ~~Background job runner — Phase 12.~~ Resolved by ADR-0005.
 5. TypeScript 7 adoption once `typescript-eslint` supports it — quarterly review.
 6. Node 26 LTS adoption, coordinated with Docker base images and CI — Phase 14.
 

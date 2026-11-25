@@ -95,6 +95,26 @@ export function verificationEmailTemplate(input: {
   };
 }
 
+export function notificationEmailTemplate(input: {
+  name: string;
+  title: string;
+  body: string;
+  link?: string | null;
+}): EmailMessage {
+  const safeName = escapeHtml(input.name);
+  const safeTitle = escapeHtml(input.title);
+  const safeBody = escapeHtml(input.body);
+  const safeLink = input.link === null || input.link === undefined ? null : escapeHtml(input.link);
+  const linkBlock = safeLink === null ? '' : `<p><a href="${safeLink}">Open in Atrium</a></p>`;
+
+  return {
+    to: '',
+    subject: `Atrium: ${input.title}`,
+    text: `Hello ${input.name},\n\n${input.title}\n\n${input.body}${input.link === null || input.link === undefined ? '' : `\n\n${input.link}`}\n`,
+    html: `<p>Hello ${safeName},</p><h2>${safeTitle}</h2><p>${safeBody}</p>${linkBlock}`,
+  };
+}
+
 export function passwordResetEmailTemplate(input: {
   name: string;
   resetUrl: string;

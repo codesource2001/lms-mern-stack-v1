@@ -182,6 +182,20 @@ export class LessonService {
 
     return { key: lesson.assetKey, path: storageProvider.resolvePath(lesson.assetKey) };
   }
+
+  async getLessonCounts(courseIds: readonly string[]) {
+    const rows = await this.lessons.lessonCountsByCourse(courseIds);
+    return new Map(rows.map((row) => [row._id.toString(), row.count]));
+  }
+
+  async getCompletionCounts(courseIds: readonly string[]) {
+    const rows = await this.lessons.completionCountsByCourse(courseIds);
+    return new Map(rows.map((row) => [row._id.toString(), row.count]));
+  }
+
+  async getUserCompletionCount(userId: string, courseId: string): Promise<number> {
+    return this.lessons.userCompletionCountByCourse(userId, courseId);
+  }
 }
 
 export const lessonRepository = new LessonRepository();

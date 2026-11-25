@@ -3,6 +3,23 @@ import { Types } from 'mongoose';
 import { CertificateModel, type CertificateDocument } from './certificate.model.js';
 
 export class CertificateRepository {
+  async analyticsCounts() {
+    const [issued, active, revoked] = await Promise.all([
+      CertificateModel.countDocuments(),
+      CertificateModel.countDocuments({ active: true }),
+      CertificateModel.countDocuments({ active: false }),
+    ]);
+
+    return { issued, active, revoked };
+  }
+
+  async countActiveByUser(userId: string): Promise<number> {
+    return CertificateModel.countDocuments({
+      user: new Types.ObjectId(userId),
+      active: true,
+    });
+  }
+
   async findById(id: string) {
     return CertificateModel.findById(id).lean() as Promise<
       (CertificateDocument & { _id: Types.ObjectId }) | null

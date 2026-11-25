@@ -3,6 +3,50 @@ import { Types } from 'mongoose';
 import { QuestionBankModel, QuestionModel, QuizModel, QuizAttemptModel } from './quiz.model.js';
 
 export class QuizRepository {
+  async countPendingManualByCourse(courseId: string): Promise<number> {
+    const rows = await QuizAttemptModel.aggregate<{ count: number }>([
+      {
+        $lookup: {
+          from: 'quizzes',
+          localField: 'quiz',
+          foreignField: '_id',
+          as: 'quizDoc',
+        },
+      },
+      { $unwind: '$quizDoc' },
+      { $match: { 'quizDoc.course': new Types.ObjectId(courseId), status: 'submitted' } },
+      { $count: 'count' },
+    ]);
+
+    return rows[0]?.count ?? 0;
+  }
+
+  async gradeStatsForUser(userId: string) {
+    const rows = await QuizAttemptModel.aggregate<{
+      graded: number;
+      score: number;
+      maxScore: number;
+    }>([
+      {
+        $match: {
+          user: new Types.ObjectId(userId),
+          status: 'graded',
+          score: { $ne: null },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          graded: { $sum: 1 },
+          score: { $sum: '$score' },
+          maxScore: { $sum: { $ifNull: ['$maxScore', 0] } },
+        },
+      },
+    ]);
+
+    return rows[0] ?? { graded: 0, score: 0, maxScore: 0 };
+  }
+
   async findBankById(id: string) {
     return QuestionBankModel.findById(id).lean();
   }

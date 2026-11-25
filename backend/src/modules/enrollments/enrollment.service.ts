@@ -119,6 +119,14 @@ export class EnrollmentService {
     );
   }
 
+  async getAnalytics() {
+    return this.enrollments.analyticsSummary();
+  }
+
+  async listActiveUserIdsByCourse(courseId: string, limit = 1_000): Promise<string[]> {
+    return this.enrollments.listActiveUserIdsByCourse(courseId, limit);
+  }
+
   async revoke(id: string) {
     const enrollment = await this.enrollments.findById(id);
 

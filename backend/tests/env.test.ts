@@ -57,4 +57,10 @@ describe('environment validation', () => {
     );
     expect(() => parseEnvironment({ READINESS_TIMEOUT_MS: '10' })).toThrow(/READINESS_TIMEOUT_MS/);
   });
+
+  it('defaults the job worker on outside tests and supports an explicit override', () => {
+    expect(parseEnvironment({ NODE_ENV: 'development' }).JOBS_WORKER_ENABLED).toBe(true);
+    expect(parseEnvironment({ NODE_ENV: 'test' }).JOBS_WORKER_ENABLED).toBe(false);
+    expect(parseEnvironment({ JOBS_WORKER_ENABLED: 'false' }).JOBS_WORKER_ENABLED).toBe(false);
+  });
 });

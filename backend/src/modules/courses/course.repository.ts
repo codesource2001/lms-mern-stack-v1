@@ -64,6 +64,26 @@ export class CategoryRepository {
 }
 
 export class CourseRepository {
+  async analyticsCounts(instructorId?: string) {
+    const filter =
+      instructorId === undefined ? {} : { instructor: new Types.ObjectId(instructorId) };
+    const [total, published, draft, submitted, archived] = await Promise.all([
+      CourseModel.countDocuments(filter),
+      CourseModel.countDocuments({ ...filter, status: 'published' }),
+      CourseModel.countDocuments({ ...filter, status: 'draft' }),
+      CourseModel.countDocuments({ ...filter, status: 'submitted' }),
+      CourseModel.countDocuments({ ...filter, status: 'archived' }),
+    ]);
+
+    return { total, published, draft, submitted, archived };
+  }
+
+  async findByIds(ids: readonly string[]) {
+    return CourseModel.find({ _id: { $in: ids.map((id) => new Types.ObjectId(id)) } })
+      .limit(100)
+      .lean() as Promise<Array<CourseDocument & { _id: Types.ObjectId }>>;
+  }
+
   async list(
     filter: Record<string, unknown>,
     sort: Record<string, 1 | -1>,

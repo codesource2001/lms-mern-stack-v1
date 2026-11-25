@@ -115,6 +115,18 @@ const envSchema = z
     SMTP_SECURE: booleanString,
     SMTP_USER: z.string().trim().max(255).optional(),
     SMTP_PASSWORD: z.string().max(512).optional(),
+    JOBS_WORKER_ENABLED: z.enum(['true', 'false']).optional(),
+    JOBS_POLL_INTERVAL_MS: z.coerce.number().int().min(100).max(60_000).default(1_000),
+    JOBS_JOB_LEASE_MS: z.coerce.number().int().min(1_000).max(600_000).default(30_000),
+    JOBS_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(3),
+    JOBS_CLAIM_LIMIT: z.coerce.number().int().min(1).max(100).default(20),
+    JOBS_REMINDER_INTERVAL_MS: z.coerce.number().int().min(60_000).max(3_600_000).default(900_000),
+    JOBS_REMINDER_WINDOW_MS: z.coerce
+      .number()
+      .int()
+      .min(3_600_000)
+      .max(604_800_000)
+      .default(86_400_000),
   })
   .superRefine((value, ctx) => {
     if (value.AUTH_REFRESH_IDLE_TTL_DAYS > value.AUTH_REFRESH_ABSOLUTE_TTL_DAYS) {
@@ -202,9 +214,13 @@ const envSchema = z
 
 type ParsedEnv = z.infer<typeof envSchema>;
 
-export type Env = Omit<ParsedEnv, 'ENABLE_API_DOCS' | 'AUTH_COOKIE_SECURE'> & {
+export type Env = Omit<
+  ParsedEnv,
+  'ENABLE_API_DOCS' | 'AUTH_COOKIE_SECURE' | 'JOBS_WORKER_ENABLED'
+> & {
   ENABLE_API_DOCS: boolean;
   AUTH_COOKIE_SECURE: boolean;
+  JOBS_WORKER_ENABLED: boolean;
 };
 
 /**
@@ -228,6 +244,9 @@ export function parseEnvironment(input: NodeJS.ProcessEnv): Env {
     ENABLE_API_DOCS: parsed.data.ENABLE_API_DOCS ?? parsed.data.NODE_ENV !== 'production',
     AUTH_COOKIE_SECURE:
       parsed.data.AUTH_COOKIE_SECURE === 'true' || parsed.data.NODE_ENV === 'production',
+    JOBS_WORKER_ENABLED:
+      parsed.data.JOBS_WORKER_ENABLED === 'true' ||
+      (parsed.data.JOBS_WORKER_ENABLED === undefined && parsed.data.NODE_ENV !== 'test'),
   };
 }
 

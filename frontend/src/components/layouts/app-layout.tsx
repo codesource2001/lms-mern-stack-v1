@@ -1,11 +1,13 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
 
 import { Button } from '@/components/ui/button';
+import { NotificationBell } from '@/features/notifications/notification-bell';
 import { useAuthStore } from '@/stores/auth-store';
 import { useUiStore } from '@/stores/ui-store';
 
 const navigation = [
-  { label: 'Dashboard', to: '/app', permission: null },
+  { label: 'Dashboard', to: '/app', permission: 'analytics:read' },
+  { label: 'Notifications', to: '/app/notifications', permission: 'notifications:read' },
   { label: 'Profile', to: '/app/profile', permission: 'profile:read' },
 ];
 
@@ -52,6 +54,9 @@ export function AppLayout() {
         <header className="flex h-16 items-center justify-between border-b px-6">
           <div className="text-sm text-muted-foreground">{location.pathname}</div>
           <div className="flex items-center gap-3">
+            {user?.permissions.includes('notifications:read') === true ? (
+              <NotificationBell />
+            ) : null}
             <Button
               variant="outline"
               size="sm"
