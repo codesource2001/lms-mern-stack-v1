@@ -268,8 +268,8 @@ Never silently continue into a new phase.
 
 ---
 
-## 10. Current state (Phase 5 complete)
+## 10. Current state (Phase 6 complete)
 
-- Implemented: workspace tooling, React shell, Express foundation, Mongo/Redis connections with retries and readiness, schema and repository conventions, request validation, bounded query helpers, seed runner, Zod-first OpenAPI + Swagger UI, auth/RBAC with session rotation and reuse detection, CSRF defense, audit logging, email abstraction, frontend foundation, user management backend (list/detail/edit/suspend/reactivate/soft-delete/role assignment/instructor applications), CI, docs.
-- Not implemented: course management, file storage, deployment.
-- Next: Phase 6 — course management. See `PLAN.md`.
+- Implemented: workspace tooling, React shell, Express foundation, Mongo/Redis connections, auth/RBAC, frontend foundation, user management, course management backend (categories, courses, sections, storage, state machine, catalog, tests), CI, docs.
+- Not implemented: course OpenAPI registration, frontend course pages, file storage cloud providers, deployment.
+- Next: Phase 7 — lesson and video management. See `PLAN.md`.

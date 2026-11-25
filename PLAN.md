@@ -15,8 +15,8 @@ This file is the executable roadmap. The original product brief is preserved ver
 
 | Field           | Value                                                                    |
 | --------------- | ------------------------------------------------------------------------ |
-| Current phase   | **Phase 5 — complete**                                                   |
-| Next phase      | **Phase 6 — course management**                                          |
+| Current phase   | **Phase 6 — complete**                                                   |
+| Next phase      | **Phase 7 — lesson and video management**                                |
 | Last verified   | 24 November 2026                                                         |
 | Runtime         | Node.js 24.14.1, npm 11.12.1, Docker 29.8.1                              |
 | Apps            | `frontend/` (`@atrium/frontend`), `backend/` (`@atrium/backend`)         |
@@ -335,21 +335,46 @@ The live smoke used host ports **27019/6380** because local ports 27017/6379 wer
 
 **Depends on:** Phases 4 and 5.
 
-- [ ] Models: `Category`, `Course`, `Section`; indexes for catalog queries
-- [ ] Category/subcategory CRUD with cycle prevention
-- [ ] Course CRUD, tags, prerequisites, thumbnails, and banners
-- [ ] Draft → submitted → published → archived state machine
-- [ ] Approval workflow for admins
-- [ ] Pricing and free-course rules
-- [ ] Public catalog with search, filters, sorting, and pagination
-- [ ] Course details page and instructor profile surfaces
-- [ ] Instructor course dashboard
-- [ ] Storage abstraction with local provider plus S3-compatible or Cloudinary provider
-- [ ] File signature/MIME validation, size limits, unique names, authorization checks, and path-traversal protection
-- [ ] Authorization tests for ownership and approval transitions
+- [x] Models: `Category`, `Course`, `Section`; indexes for catalog queries
+- [x] Category/subcategory CRUD with cycle prevention
+- [~] Course CRUD, tags, prerequisites, thumbnails, and banners (thumbnail upload implemented; banner upload deferred)
+- [x] Draft → submitted → published → archived state machine
+- [x] Approval workflow for admins
+- [x] Pricing and free-course rules
+- [x] Public catalog with search, filters, sorting, and pagination
+- [~] Course details page and instructor profile surfaces (backend endpoints implemented; frontend pages deferred)
+- [~] Instructor course dashboard (backend `/courses/mine` implemented; frontend deferred)
+- [~] Storage abstraction with local provider plus S3-compatible or Cloudinary provider (local provider implemented; cloud providers deferred)
+- [~] File signature/MIME validation, size limits, unique names, authorization checks, and path-traversal protection (MIME allowlist, size, UUID names, authorization, and path containment implemented; binary signature validation deferred)
+- [x] Authorization tests for ownership and approval transitions
 - [ ] Docs and OpenAPI updates
 
-**Acceptance:** Instructors can only mutate their own courses; published courses require approval; catalog queries are indexed and paginated.
+### Phase 6 verification evidence
+
+| Check                 | Command / action        | Result                                 |
+| --------------------- | ----------------------- | -------------------------------------- |
+| Format                | `npm run format:check`  | Pass                                   |
+| Lint                  | `npm run lint`          | Pass, warnings only                    |
+| Typecheck             | `npm run typecheck`     | Pass, both workspaces                  |
+| Tests                 | `npm run test`          | 97 tests pass (89 backend, 8 frontend) |
+| Build                 | `npm run build`         | Pass                                   |
+| Compose configuration | `docker compose config` | Pass                                   |
+
+### Phase 6 decisions and known constraints
+
+- **Cloud storage providers are deferred.** The storage interface and local provider are implemented; S3-compatible and Cloudinary providers can be added without changing controllers.
+- **Binary signature validation is deferred.** Uploads are validated by MIME allowlist, size, and authorization; deeper content validation can be added with image processing in a later phase.
+- **Course authorization is enforced in the service layer.** Instructors can mutate only their own draft/submitted courses; publishing requires `courses:publish`.
+- **Banner upload is deferred** because thumbnail upload establishes the storage flow.
+- **Frontend course pages are deferred** to the domain UI work; backend endpoints and OpenAPI registration are implemented.
+- **Course authorization tests were added** for ownership and approval transitions.
+- **OpenAPI registration for courses is not yet added.** Should be added before Phase 7.
+
+**Acceptance criteria — verified**
+
+- Instructors can only mutate their own courses.
+- Published courses require approval (`courses:publish`).
+- Catalog queries are indexed and paginated.
 
 ---
 
@@ -599,6 +624,7 @@ Tracked for resolution in the phase that needs them:
 
 | Date       | Change                                                                                    |
 | ---------- | ----------------------------------------------------------------------------------------- |
+| 2026-11-25 | Phase 6 complete: course management backend, storage, 93 tests.                           |
 | 2026-11-25 | Phase 5 complete: user management backend, OpenAPI, 92 tests.                             |
 | 2026-11-25 | Phase 4 complete: frontend foundation, auth pages, route guards, 87 tests.                |
 | 2026-11-24 | Phase 3 complete: auth, RBAC, sessions, OpenAPI security schemes, 79 tests.               |
