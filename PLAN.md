@@ -496,10 +496,11 @@ The live smoke used host ports **27019/6380** because local ports 27017/6379 wer
 - **OpenAPI registration for assignments is not yet added.**
 - **Submission files are stored through the local storage provider** with size and MIME validation.
 
-**Acceptance criteria - verified**
+**Acceptance status — partial**
 
-- Students cannot read other students' submissions; only course instructors/admins can grade.
-- Deadlines are enforced server-side.
+- Students cannot read other students' submissions: service-level ownership checks are implemented.
+- Deadlines are enforced server-side: late submissions are flagged and submission timestamps are server-controlled.
+- Only course instructors/admins can grade: instructors are enforced; **admin override is not wired in the controller yet**, so an administrator who is not the course instructor is rejected. Remediation is tracked before Phase 12.
 
 ---
 
@@ -537,11 +538,12 @@ The live smoke used host ports **27019/6380** because local ports 27017/6379 wer
 - **OpenAPI registration for quizzes is not yet added.**
 - **Frontend quiz UI is deferred.**
 
-**Acceptance criteria - verified**
+**Acceptance status — implemented, not fully verified**
 
-- Clients cannot extend time or resubmit graded attempts.
-- Correct answers are never exposed before submission.
-- Grading is deterministic for objective questions.
+- Clients cannot extend time or resubmit graded attempts: server-side expiry and single-submit guards are implemented.
+- Correct answers are never exposed before submission: attempt retrieval omits `correctAnswer`.
+- Grading is deterministic for objective questions: exact normalized string comparison is used.
+- **Automated timer and grading tests are still missing**, and the admin override used by manual grading is not wired in the controller yet.
 
 ---
 
