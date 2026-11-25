@@ -319,6 +319,7 @@ No production incident process exists yet because no production deployment exist
 
 | Date       | Change                                                                                        |
 | ---------- | --------------------------------------------------------------------------------------------- |
+| 2026-11-25 | Phase 14 deployment policy: non-root images, proxy, secrets via environment, runbook.         |
 | 2026-11-25 | Phase 13 security policy: access fixes, boundary validation, endpoint limits, audit coverage. |
 | 2026-11-25 | Phase 12 security policy: notifications, preferences, jobs, analytics scope, new gaps.        |
 | 2026-11-25 | Phase 9/10 remediation: administrative override wired into domain controllers and tested.     |

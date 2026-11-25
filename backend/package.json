@@ -18,7 +18,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "seed": "tsx src/seeds/seed.cli.ts",
-    "seed:prod": "node dist/seeds/seed.cli.js"
+    "seed:prod": "node dist/seeds/seed.cli.js",
+    "indexes": "tsx src/seeds/indexes.cli.ts",
+    "indexes:prod": "node dist/seeds/indexes.cli.js"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "9.1.0",

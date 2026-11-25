@@ -5,7 +5,8 @@
   "description": "Atrium LMS — a production-oriented MERN learning platform.",
   "workspaces": [
     "frontend",
-    "backend"
+    "backend",
+    "e2e"
   ],
   "engines": {
     "node": ">=24.0.0",
@@ -20,8 +21,10 @@
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "test:e2e": "npm run test:e2e --workspace @atrium/e2e",
     "test:coverage": "npm run test:coverage --workspaces --if-present",
     "seed": "npm run seed --workspace backend",
+    "indexes": "npm run indexes --workspace backend",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky"

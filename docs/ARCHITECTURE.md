@@ -388,7 +388,7 @@ Full rationale and alternatives: [ADR-0002](adr/0002-authentication-token-strate
 
 ---
 
-## 9. Deployment architecture (target, Phase 14)
+## 9. Deployment architecture (Phase 14 — configured, not live-verified)
 
 ```mermaid
 flowchart TB
@@ -415,7 +415,7 @@ Principles:
 - Migrations/index builds are explicit release steps, not implicit startup side effects for destructive changes.
 - Logs go to stdout and are collected by the platform.
 
-Phase 2 provides the Compose definitions for local MongoDB and Redis only. No application containers exist yet.
+`docker-compose.prod.yml`, the non-root Dockerfiles, and the Caddy proxy configuration are committed. Both Compose files validate with `docker compose config`; images were not built and the stack was not started in the development environment because the Docker daemon was unavailable. See [`DEPLOYMENT.md`](DEPLOYMENT.md) for the deployment and rollback procedure.
 
 ---
 
