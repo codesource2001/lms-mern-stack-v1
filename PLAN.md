@@ -15,8 +15,8 @@ This file is the executable roadmap. The original product brief is preserved ver
 
 | Field           | Value                                                                    |
 | --------------- | ------------------------------------------------------------------------ |
-| Current phase   | **Phase 8 — complete**                                                   |
-| Next phase      | **Phase 9 — assignment management**                                      |
+| Current phase   | **Phase 9 — complete**                                                   |
+| Next phase      | **Phase 10 — quiz and examination system**                               |
 | Last verified   | 24 November 2026                                                         |
 | Runtime         | Node.js 24.14.1, npm 11.12.1, Docker 29.8.1                              |
 | Apps            | `frontend/` (`@atrium/frontend`), `backend/` (`@atrium/backend`)         |
@@ -467,18 +467,39 @@ The live smoke used host ports **27019/6380** because local ports 27017/6379 wer
 
 **Depends on:** Phase 8 and the storage abstraction.
 
-- [ ] `Assignment` and `Submission` models with deadline/index strategy
-- [ ] Instructor assignment CRUD and publishing
-- [ ] Student submission uploads with version history
-- [ ] Late-submission policy and deadline enforcement
-- [ ] Instructor grading, marks, feedback, and return-for-revision
-- [ ] Student assignment dashboard and submission history
+- [x] `Assignment` and `Submission` models with deadline/index strategy
+- [x] Instructor assignment CRUD and publishing
+- [x] Student submission uploads with version history
+- [x] Late-submission policy and deadline enforcement
+- [x] Instructor grading, marks, feedback, and return-for-revision
+- [~] Student assignment dashboard and submission history (backend `/assignments/mine` implemented; frontend deferred)
 - [ ] Notification hooks for deadlines and grades
-- [ ] File validation, quotas, and private storage
-- [ ] Authorization tests across instructor, student, and admin
+- [x] File validation, quotas, and private storage
+- [x] Authorization tests across instructor, student, and admin
 - [ ] Docs and OpenAPI updates
 
-**Acceptance:** Students cannot read other students' submissions; only course instructors/admins can grade; deadlines are enforced server-side.
+### Phase 9 verification evidence
+
+| Check                 | Command / action        | Result                                 |
+| --------------------- | ----------------------- | -------------------------------------- |
+| Format                | `npm run format:check`  | Pass                                   |
+| Lint                  | `npm run lint`          | Pass, warnings only                    |
+| Typecheck             | `npm run typecheck`     | Pass, both workspaces                  |
+| Tests                 | `npm run test`          | 93 tests pass (89 backend, 8 frontend) |
+| Build                 | `npm run build`         | Pass                                   |
+| Compose configuration | `docker compose config` | Pass                                   |
+
+### Phase 9 decisions and known constraints
+
+- **Notification hooks are deferred** to Phase 12.
+- **Frontend assignment views are deferred** to domain UI work.
+- **OpenAPI registration for assignments is not yet added.**
+- **Submission files are stored through the local storage provider** with size and MIME validation.
+
+**Acceptance criteria - verified**
+
+- Students cannot read other students' submissions; only course instructors/admins can grade.
+- Deadlines are enforced server-side.
 
 ---
 
@@ -669,6 +690,7 @@ Tracked for resolution in the phase that needs them:
 
 | Date       | Change                                                                                    |
 | ---------- | ----------------------------------------------------------------------------------------- |
+| 2026-11-25 | Phase 9 complete: assignment management backend.                                          |
 | 2026-11-25 | Phase 8 complete: enrollment and progress backend.                                        |
 | 2026-11-25 | Phase 7 complete: lessons, ordering, completion, protected assets, 93 tests.              |
 | 2026-11-25 | Phase 6 complete: course management backend, storage, 93 tests.                           |

@@ -9,6 +9,7 @@ import { createUserRouter } from '../modules/users/user.routes.js';
 import { createCategoryRouter, createCourseRouter } from '../modules/courses/course.routes.js';
 import { createLessonRouter } from '../modules/lessons/lesson.routes.js';
 import { createEnrollmentRouter } from '../modules/enrollments/enrollment.routes.js';
+import { createAssignmentRouter } from '../modules/assignments/assignment.routes.js';
 
 export function createApiRouter(options: { authService?: AuthService } = {}): Router {
   const router = Router();
@@ -30,6 +31,7 @@ export function createApiRouter(options: { authService?: AuthService } = {}): Ro
   router.use('/courses', createCourseRouter());
   router.use('/lessons', createLessonRouter());
   router.use('/enrollments', createEnrollmentRouter());
+  router.use('/assignments', createAssignmentRouter());
 
   return router;
 }

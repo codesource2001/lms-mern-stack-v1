@@ -268,8 +268,8 @@ Never silently continue into a new phase.
 
 ---
 
-## 10. Current state (Phase 8 complete)
+## 10. Current state (Phase 9 complete)
 
-- Implemented: workspace tooling, React shell, Express foundation, Mongo/Redis connections, auth/RBAC, frontend foundation, user management, course management, lesson management, enrollment and progress backend, CI, docs.
-- Not implemented: assignment management, frontend domain pages, deployment.
-- Next: Phase 9 — assignment management. See `PLAN.md`.
+- Implemented: workspace tooling, React shell, Express foundation, Mongo/Redis connections, auth/RBAC, frontend foundation, user management, course management, lesson management, enrollment and progress, assignment management backend, CI, docs.
+- Not implemented: quiz system, frontend domain pages, deployment.
+- Next: Phase 10 — quiz and examination system. See `PLAN.md`.
