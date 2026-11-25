@@ -268,8 +268,8 @@ Never silently continue into a new phase.
 
 ---
 
-## 10. Current state (Phase 6 complete)
+## 10. Current state (Phase 7 complete)
 
-- Implemented: workspace tooling, React shell, Express foundation, Mongo/Redis connections, auth/RBAC, frontend foundation, user management, course management backend (categories, courses, sections, storage, state machine, catalog, tests), CI, docs.
-- Not implemented: course OpenAPI registration, frontend course pages, file storage cloud providers, deployment.
-- Next: Phase 7 — lesson and video management. See `PLAN.md`.
+- Implemented: workspace tooling, React shell, Express foundation, Mongo/Redis connections, auth/RBAC, frontend foundation, user management, course management, lesson management backend (lessons, sections, ordering, completion, protected assets, sanitization), CI, docs.
+- Not implemented: frontend lesson UI, video transcoding/streaming, progress recalculation, deployment.
+- Next: Phase 8 — enrollment and learning progress. See `PLAN.md`.

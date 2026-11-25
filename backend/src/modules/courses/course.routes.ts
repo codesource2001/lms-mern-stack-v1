@@ -12,6 +12,8 @@ import {
   validateSection,
 } from './course.validation.js';
 import { sendSuccess } from '../../shared/http/response.js';
+import { lessonController } from '../lessons/lesson.controller.js';
+import { validateLessonCreate, validateReorder } from '../lessons/lesson.validation.js';
 
 export function createCategoryRouter() {
   const router = Router();
@@ -126,6 +128,26 @@ export function createCourseRouter() {
     requirePermission(PERMISSIONS.COURSES_WRITE),
     upload.single('file'),
     courseController.uploadThumbnail,
+  );
+  router.get(
+    '/:id/lessons',
+    requireAuth,
+    requirePermission(PERMISSIONS.LESSONS_READ),
+    lessonController.list,
+  );
+  router.post(
+    '/:id/lessons',
+    requireAuth,
+    requirePermission(PERMISSIONS.LESSONS_WRITE),
+    validateLessonCreate,
+    lessonController.create,
+  );
+  router.post(
+    '/:id/lessons/reorder',
+    requireAuth,
+    requirePermission(PERMISSIONS.LESSONS_WRITE),
+    validateReorder,
+    lessonController.reorder,
   );
 
   return router;
