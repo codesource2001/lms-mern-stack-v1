@@ -10,6 +10,7 @@ import { createCategoryRouter, createCourseRouter } from '../modules/courses/cou
 import { createLessonRouter } from '../modules/lessons/lesson.routes.js';
 import { createEnrollmentRouter } from '../modules/enrollments/enrollment.routes.js';
 import { createAssignmentRouter } from '../modules/assignments/assignment.routes.js';
+import { createQuizRouter } from '../modules/quizzes/quiz.routes.js';
 
 export function createApiRouter(options: { authService?: AuthService } = {}): Router {
   const router = Router();
@@ -32,6 +33,7 @@ export function createApiRouter(options: { authService?: AuthService } = {}): Ro
   router.use('/lessons', createLessonRouter());
   router.use('/enrollments', createEnrollmentRouter());
   router.use('/assignments', createAssignmentRouter());
+  router.use('/quizzes', createQuizRouter());
 
   return router;
 }

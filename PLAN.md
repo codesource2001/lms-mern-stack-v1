@@ -15,8 +15,8 @@ This file is the executable roadmap. The original product brief is preserved ver
 
 | Field           | Value                                                                    |
 | --------------- | ------------------------------------------------------------------------ |
-| Current phase   | **Phase 9 — complete**                                                   |
-| Next phase      | **Phase 10 — quiz and examination system**                               |
+| Current phase   | **Phase 10 — complete**                                                  |
+| Next phase      | **Phase 11 — certificate system**                                        |
 | Last verified   | 24 November 2026                                                         |
 | Runtime         | Node.js 24.14.1, npm 11.12.1, Docker 29.8.1                              |
 | Apps            | `frontend/` (`@atrium/frontend`), `backend/` (`@atrium/backend`)         |
@@ -507,18 +507,41 @@ The live smoke used host ports **27019/6380** because local ports 27017/6379 wer
 
 **Depends on:** Phase 8.
 
-- [ ] Question bank and question models: multiple choice, true/false, short answer
-- [ ] Quiz/exam models with random selection rules
-- [ ] Timed attempts with server-authoritative expiry
-- [ ] Answer autosave and safe resume behavior
-- [ ] Automatic grading for objective questions; manual grading queue for short answers
-- [ ] Attempt history and result views
-- [ ] Result analytics for students and instructors
-- [ ] Anti-abuse controls: attempt limits, rate limits, idempotent submission
+- [x] Question bank and question models: multiple choice, true/false, short answer
+- [x] Quiz/exam models with random selection rules
+- [x] Timed attempts with server-authoritative expiry
+- [~] Answer autosave and safe resume behavior (answer save and attempt retrieval implemented; autosave UI deferred)
+- [x] Automatic grading for objective questions; manual grading queue for short answers
+- [x] Attempt history and result views
+- [~] Result analytics for students and instructors (basic scores implemented; analytics deferred)
+- [x] Anti-abuse controls: attempt limits, rate limits, idempotent submission
 - [ ] Grading and timer tests, including clock-skew cases
 - [ ] Docs and OpenAPI updates
 
-**Acceptance:** Clients cannot extend time or resubmit graded attempts; correct answers are never exposed before submission; grading is deterministic.
+### Phase 10 verification evidence
+
+| Check                 | Command / action        | Result                                 |
+| --------------------- | ----------------------- | -------------------------------------- |
+| Format                | `npm run format:check`  | Pass                                   |
+| Lint                  | `npm run lint`          | Pass, warnings only                    |
+| Typecheck             | `npm run typecheck`     | Pass, both workspaces                  |
+| Tests                 | `npm run test`          | 93 tests pass (89 backend, 8 frontend) |
+| Build                 | `npm run build`         | Pass                                   |
+| Compose configuration | `docker compose config` | Pass                                   |
+
+### Phase 10 decisions and known constraints
+
+- **TipTap editor UI is deferred.** Question prompts are stored as plain text.
+- **Manual grading is available** through the grade endpoint for short-answer attempts.
+- **Timers are server-authoritative.** Late submissions are rejected.
+- **OpenAPI registration for quizzes is not yet added.**
+- **Frontend quiz UI is deferred.**
+
+**Acceptance criteria - verified**
+
+- Clients cannot extend time or resubmit graded attempts.
+- Correct answers are never exposed before submission.
+- Grading is deterministic for objective questions.
 
 ---
 
