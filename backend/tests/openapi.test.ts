@@ -29,6 +29,11 @@ describe('OpenAPI contract', () => {
     expect(openApiDocument.paths).toHaveProperty('/api/v1/notifications/preferences');
     expect(openApiDocument.paths).toHaveProperty('/api/v1/announcements');
     expect(openApiDocument.paths).toHaveProperty('/api/v1/analytics/overview');
+    expect(openApiDocument.paths).toHaveProperty('/api/v1/courses');
+    expect(openApiDocument.paths).toHaveProperty('/api/v1/lessons/{id}/asset');
+    expect(openApiDocument.paths).toHaveProperty('/api/v1/enrollments');
+    expect(openApiDocument.paths).toHaveProperty('/api/v1/assignments/{id}/submit');
+    expect(openApiDocument.paths).toHaveProperty('/api/v1/quizzes/attempts/{id}/submit');
   });
 
   it('serves the generated document and Swagger UI outside production', async () => {

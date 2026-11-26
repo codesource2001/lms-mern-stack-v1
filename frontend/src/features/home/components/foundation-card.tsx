@@ -21,11 +21,11 @@ export function FoundationCard() {
         <div className="border-b border-white/10 px-6 py-5 sm:px-7">
           <div className="flex items-center justify-between gap-4">
             <p className="font-display text-base font-medium">Foundation checklist</p>
-            <span className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[10px] font-semibold tracking-[0.14em] text-background/70 uppercase">
+            <span className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[10px] font-semibold tracking-[0.14em] text-background/85 uppercase">
               Phase 2
             </span>
           </div>
-          <p className="mt-1 text-sm text-background/60">Verified against local services</p>
+          <p className="mt-1 text-sm text-background/85">Verified against local services</p>
         </div>
 
         <ul className="divide-y divide-white/10 px-6 sm:px-7">
@@ -41,14 +41,14 @@ export function FoundationCard() {
         </ul>
 
         <div className="border-t border-white/10 px-6 py-5 sm:px-7">
-          <div className="flex items-center justify-between text-xs text-background/60">
+          <div className="flex items-center justify-between text-xs text-background/85">
             <span>Delivery progress</span>
             <span className="font-mono">2 / 15 phases</span>
           </div>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
             <div className="h-full w-[13.3%] rounded-full bg-amber" />
           </div>
-          <p className="mt-3 text-xs text-background/55">Next: authentication and RBAC.</p>
+          <p className="mt-3 text-xs text-background/85">Next: authentication and RBAC.</p>
         </div>
       </Card>
     </div>

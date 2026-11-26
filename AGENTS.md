@@ -268,8 +268,8 @@ Never silently continue into a new phase.
 
 ---
 
-## 10. Current state (Phase 14 complete — live deployment not yet verified)
+## 10. Current state (Phase 15 complete)
 
-- Implemented: workspace tooling, React shell, Express foundation, Mongo/Redis connections, auth/RBAC, frontend foundation, user management, course management, lesson management, enrollment and progress, assignment management, quiz and examination backend, certificate issuance/verification/PDF/revocation, notifications with preferences and email delivery status, Redis-backed background jobs, course announcements, role-scoped analytics with Recharts dashboards, security audit with access-control fixes and endpoint limits, multi-stage Dockerfiles, production Compose, Playwright UI journeys, CI coverage artifacts, and deployment runbook.
-- Not implemented: live container/E2E stack verification in this environment, dedicated worker process, quiz scheduling and reminders, frontend course/assessment pages beyond analytics and notifications, audit log read API.
-- Next: Phase 15 — production documentation. See `PLAN.md`.
+- Implemented: all 15 phases — workspace tooling, React shell, Express foundation, Mongo/Redis connections, auth/RBAC, frontend foundation, domain management (users, courses, lessons, enrollments, assignments, quizzes, certificates), notifications and role-scoped analytics, security audit, multi-stage Dockerfiles, production Compose, Playwright and axe checks, exported OpenAPI reference, and operations documentation.
+- Not implemented: live container/E2E stack verification in this environment, dedicated worker process, quiz scheduling, frontend course/assessment pages beyond analytics and notifications, audit log read API.
+- Next: maintenance. See `docs/RELEASE-NOTES.md` for the handoff checklist and open conditions.

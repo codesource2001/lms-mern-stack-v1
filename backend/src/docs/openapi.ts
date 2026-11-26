@@ -12,6 +12,11 @@ import { registerUserOpenApi } from '../modules/users/user.openapi.js';
 import { registerNotificationOpenApi } from '../modules/notifications/notification.openapi.js';
 import { registerAnnouncementOpenApi } from '../modules/announcements/announcement.openapi.js';
 import { registerAnalyticsOpenApi } from '../modules/analytics/analytics.openapi.js';
+import { registerCourseOpenApi } from '../modules/courses/course.openapi.js';
+import { registerLessonOpenApi } from '../modules/lessons/lesson.openapi.js';
+import { registerEnrollmentOpenApi } from '../modules/enrollments/enrollment.openapi.js';
+import { registerAssignmentOpenApi } from '../modules/assignments/assignment.openapi.js';
+import { registerQuizOpenApi } from '../modules/quizzes/quiz.openapi.js';
 
 extendZodWithOpenApi(z);
 
@@ -142,6 +147,11 @@ registerCertificateOpenApi(registry);
 registerNotificationOpenApi(registry);
 registerAnnouncementOpenApi(registry);
 registerAnalyticsOpenApi(registry);
+registerCourseOpenApi(registry);
+registerLessonOpenApi(registry);
+registerEnrollmentOpenApi(registry);
+registerAssignmentOpenApi(registry);
+registerQuizOpenApi(registry);
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
@@ -151,7 +161,7 @@ export const openApiDocument = generator.generateDocument({
     title: 'Atrium LMS API',
     version: env.APP_VERSION,
     description:
-      'Phase 12 API contract. Authentication, RBAC, catalog, learning, assessments, certificates, notifications, announcements, and role-scoped analytics are implemented. Domain routes from earlier phases are still being documented.',
+      'Phase 15 API contract. Authentication, RBAC, catalog, learning, assessments, certificates, notifications, announcements, and role-scoped analytics are documented. Path-level summaries describe each endpoint; request schemas are documented where Zod registration exists.',
   },
   servers: [{ url: '/', description: 'Current origin' }],
   tags: [
@@ -166,5 +176,11 @@ export const openApiDocument = generator.generateDocument({
     },
     { name: 'Announcements', description: 'Course announcements and notification fan-out' },
     { name: 'Analytics', description: 'Role-scoped platform, instructor, and learner analytics' },
+    { name: 'Categories', description: 'Course category hierarchy' },
+    { name: 'Courses', description: 'Catalog, course lifecycle, sections, and thumbnails' },
+    { name: 'Lessons', description: 'Lesson content, completion, and protected assets' },
+    { name: 'Enrollments', description: 'Enrollment lifecycle and learner progress' },
+    { name: 'Assignments', description: 'Assignments, submissions, and grading' },
+    { name: 'Quizzes', description: 'Question banks, quizzes, attempts, and grading' },
   ],
 });

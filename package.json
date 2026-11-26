@@ -25,6 +25,7 @@
     "test:coverage": "npm run test:coverage --workspaces --if-present",
     "seed": "npm run seed --workspace backend",
     "indexes": "npm run indexes --workspace backend",
+    "docs:api": "npm run docs:api --workspace backend",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky"

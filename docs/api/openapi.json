@@ -1,0 +1,3310 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Atrium LMS API",
+    "version": "0.1.0",
+    "description": "Phase 15 API contract. Authentication, RBAC, catalog, learning, assessments, certificates, notifications, announcements, and role-scoped analytics are documented. Path-level summaries describe each endpoint; request schemas are documented where Zod registration exists."
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Current origin"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Operations",
+      "description": "Liveness, readiness, and service metadata"
+    },
+    {
+      "name": "Discovery",
+      "description": "API discovery metadata"
+    },
+    {
+      "name": "Authentication",
+      "description": "Account lifecycle and session management"
+    },
+    {
+      "name": "Users",
+      "description": "User management"
+    },
+    {
+      "name": "Certificates",
+      "description": "Certificate issuance, verification, and download"
+    },
+    {
+      "name": "Notifications",
+      "description": "In-app notifications, email delivery state, and preferences"
+    },
+    {
+      "name": "Announcements",
+      "description": "Course announcements and notification fan-out"
+    },
+    {
+      "name": "Analytics",
+      "description": "Role-scoped platform, instructor, and learner analytics"
+    },
+    {
+      "name": "Categories",
+      "description": "Course category hierarchy"
+    },
+    {
+      "name": "Courses",
+      "description": "Catalog, course lifecycle, sections, and thumbnails"
+    },
+    {
+      "name": "Lessons",
+      "description": "Lesson content, completion, and protected assets"
+    },
+    {
+      "name": "Enrollments",
+      "description": "Enrollment lifecycle and learner progress"
+    },
+    {
+      "name": "Assignments",
+      "description": "Assignments, submissions, and grading"
+    },
+    {
+      "name": "Quizzes",
+      "description": "Question banks, quizzes, attempts, and grading"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [true]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["ok"]
+              },
+              "service": {
+                "type": "string",
+                "enum": ["atrium-api"]
+              },
+              "version": {
+                "type": "string"
+              },
+              "environment": {
+                "type": "string",
+                "enum": ["development", "test", "production"]
+              },
+              "uptimeSeconds": {
+                "type": "number",
+                "minimum": 0
+              },
+              "timestamp": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "service",
+              "version",
+              "environment",
+              "uptimeSeconds",
+              "timestamp"
+            ]
+          }
+        },
+        "required": ["success", "message", "data"]
+      },
+      "ApiRootResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [true]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "apiVersion": {
+                "type": "string",
+                "enum": ["v1"]
+              }
+            },
+            "required": ["name", "version", "apiVersion"]
+          }
+        },
+        "required": ["success", "message", "data"]
+      },
+      "ReadinessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [true]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["ready"]
+              },
+              "checkedAt": {
+                "type": "string"
+              },
+              "checks": {
+                "type": "object",
+                "properties": {
+                  "mongodb": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "enum": ["up", "down"]
+                      },
+                      "latencyMs": {
+                        "type": "number",
+                        "minimum": 0
+                      }
+                    },
+                    "required": ["status", "latencyMs"]
+                  },
+                  "redis": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "enum": ["up", "down"]
+                      },
+                      "latencyMs": {
+                        "type": "number",
+                        "minimum": 0
+                      }
+                    },
+                    "required": ["status", "latencyMs"]
+                  }
+                },
+                "required": ["mongodb", "redis"]
+              }
+            },
+            "required": ["status", "checkedAt", "checks"]
+          }
+        },
+        "required": ["success", "message", "data"]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [false]
+          },
+          "message": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "code": {
+                  "type": "string"
+                }
+              },
+              "required": ["field", "message"]
+            }
+          },
+          "context": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": ["success", "message", "code"]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["Operations"],
+        "summary": "Liveness probe",
+        "description": "Reports process liveness without checking MongoDB or Redis. Safe for container liveness checks.",
+        "responses": {
+          "200": {
+            "description": "Process is alive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": ["ok"]
+                        },
+                        "service": {
+                          "type": "string",
+                          "enum": ["atrium-api"]
+                        },
+                        "version": {
+                          "type": "string"
+                        },
+                        "environment": {
+                          "type": "string",
+                          "enum": ["development", "test", "production"]
+                        },
+                        "uptimeSeconds": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "service",
+                        "version",
+                        "environment",
+                        "uptimeSeconds",
+                        "timestamp"
+                      ]
+                    }
+                  },
+                  "required": ["success", "message", "data"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "tags": ["Operations"],
+        "summary": "Readiness probe",
+        "description": "Checks MongoDB and Redis with a bounded timeout. Returns 503 when either dependency is unavailable.",
+        "responses": {
+          "200": {
+            "description": "All required dependencies are reachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": ["ready"]
+                        },
+                        "checkedAt": {
+                          "type": "string"
+                        },
+                        "checks": {
+                          "type": "object",
+                          "properties": {
+                            "mongodb": {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": ["up", "down"]
+                                },
+                                "latencyMs": {
+                                  "type": "number",
+                                  "minimum": 0
+                                }
+                              },
+                              "required": ["status", "latencyMs"]
+                            },
+                            "redis": {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": ["up", "down"]
+                                },
+                                "latencyMs": {
+                                  "type": "number",
+                                  "minimum": 0
+                                }
+                              },
+                              "required": ["status", "latencyMs"]
+                            }
+                          },
+                          "required": ["mongodb", "redis"]
+                        }
+                      },
+                      "required": ["status", "checkedAt", "checks"]
+                    }
+                  },
+                  "required": ["success", "message", "data"]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "One or more dependencies are unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "field": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["field", "message"]
+                      }
+                    },
+                    "context": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1": {
+      "get": {
+        "tags": ["Discovery"],
+        "summary": "API discovery",
+        "description": "Returns the API name and version for the configured prefix.",
+        "responses": {
+          "200": {
+            "description": "API metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "string"
+                        },
+                        "apiVersion": {
+                          "type": "string",
+                          "enum": ["v1"]
+                        }
+                      },
+                      "required": ["name", "version", "apiVersion"]
+                    }
+                  },
+                  "required": ["success", "message", "data"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Register a new user",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 100
+                  },
+                  "email": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 254,
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 12,
+                    "maxLength": 128
+                  }
+                },
+                "required": ["name", "email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Account created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": ["success", "message", "data"]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Email already registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/verify-email": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Verify an email address",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 20,
+                    "maxLength": 200
+                  }
+                },
+                "required": ["token"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Email verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": ["success", "message", "data"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/resend-verification": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Resend an email verification link",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 254,
+                    "format": "email"
+                  }
+                },
+                "required": ["email"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Request accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": ["success", "message", "data"]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Sign in",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 254,
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  }
+                },
+                "required": ["email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "accessToken": {
+                          "type": "string"
+                        },
+                        "tokenType": {
+                          "type": "string",
+                          "enum": ["Bearer"]
+                        },
+                        "expiresIn": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "user": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "email": {
+                              "type": "string",
+                              "format": "email"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": ["pending_verification", "active", "suspended"]
+                            },
+                            "roles": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "slug": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["slug", "name"]
+                              }
+                            },
+                            "permissions": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "emailVerified": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "email",
+                            "status",
+                            "roles",
+                            "permissions",
+                            "emailVerified"
+                          ]
+                        }
+                      },
+                      "required": ["accessToken", "tokenType", "expiresIn", "user"]
+                    }
+                  },
+                  "required": ["success", "message", "data"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Unverified or suspended account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited or locked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Refresh an access token using the refresh cookie",
+        "responses": {
+          "200": {
+            "description": "Session refreshed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "accessToken": {
+                          "type": "string"
+                        },
+                        "tokenType": {
+                          "type": "string",
+                          "enum": ["Bearer"]
+                        },
+                        "expiresIn": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "user": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "email": {
+                              "type": "string",
+                              "format": "email"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": ["pending_verification", "active", "suspended"]
+                            },
+                            "roles": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "slug": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["slug", "name"]
+                              }
+                            },
+                            "permissions": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "emailVerified": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "email",
+                            "status",
+                            "roles",
+                            "permissions",
+                            "emailVerified"
+                          ]
+                        }
+                      },
+                      "required": ["accessToken", "tokenType", "expiresIn", "user"]
+                    }
+                  },
+                  "required": ["success", "message", "data"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Sign out of the current session",
+        "responses": {
+          "200": {
+            "description": "Signed out",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": ["success", "message", "data"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": ["Authentication"],
+        "summary": "Current user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": ["success", "message", "data"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Authentication"],
+        "summary": "Update profile",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 100
+                  }
+                },
+                "required": ["name"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": ["success", "message", "data"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/change-password": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Change password",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "currentPassword": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "minLength": 12,
+                    "maxLength": 128
+                  }
+                },
+                "required": ["currentPassword", "newPassword"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": ["success", "message", "data"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated or invalid current password",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout-all": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Sign out of all sessions",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Signed out everywhere",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": ["success", "message", "data"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/forgot-password": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Request a password reset link",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 254,
+                    "format": "email"
+                  }
+                },
+                "required": ["email"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Request accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": ["success", "message", "data"]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/reset-password": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Reset a password using a reset token",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 20,
+                    "maxLength": 200
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 12,
+                    "maxLength": 128
+                  }
+                },
+                "required": ["token", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": ["success", "message", "data"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [false]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message", "code"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "List users",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Users"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/api/v1/users/{id}": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get a user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Users"],
+        "summary": "Update a user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User updated"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Users"],
+        "summary": "Soft-delete a user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User deleted"
+          }
+        }
+      }
+    },
+    "/api/v1/users/{id}/suspend": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Suspend a user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User suspended"
+          }
+        }
+      }
+    },
+    "/api/v1/users/{id}/reactivate": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Reactivate a user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User reactivated"
+          }
+        }
+      }
+    },
+    "/api/v1/users/me/instructor-application": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Apply to become an instructor",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Application submitted"
+          }
+        }
+      }
+    },
+    "/api/v1/users/{id}/approve-instructor": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Approve an instructor application",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Instructor approved"
+          }
+        }
+      }
+    },
+    "/api/v1/users/{id}/reject-instructor": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Reject an instructor application",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Instructor rejected"
+          }
+        }
+      }
+    },
+    "/api/v1/certificates": {
+      "post": {
+        "tags": ["Certificates"],
+        "summary": "Issue your certificate for a completed course",
+        "description": "Idempotent. Returns the existing active certificate when one has already been issued. Requires an active enrollment and completion of every lesson.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Certificate already active"
+          },
+          "201": {
+            "description": "Certificate issued"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Enrollment is not active"
+          },
+          "404": {
+            "description": "Course not found"
+          },
+          "409": {
+            "description": "Course is not complete or issuance conflicted"
+          }
+        }
+      }
+    },
+    "/api/v1/certificates/issue": {
+      "post": {
+        "tags": ["Certificates"],
+        "summary": "Issue a certificate for a learner (admin)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Certificate already active"
+          },
+          "201": {
+            "description": "Certificate issued"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Course or user not found"
+          },
+          "409": {
+            "description": "Course is not complete or issuance conflicted"
+          }
+        }
+      }
+    },
+    "/api/v1/certificates/mine": {
+      "get": {
+        "tags": ["Certificates"],
+        "summary": "List your certificates",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Certificates including revoked history"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/v1/certificates/verify/{certificateId}": {
+      "get": {
+        "tags": ["Certificates"],
+        "summary": "Verify a certificate publicly",
+        "description": "Returns the recipient name, course title, issue date, and validity only. No email address or internal identifiers are disclosed.",
+        "responses": {
+          "200": {
+            "description": "Certificate verification result"
+          },
+          "404": {
+            "description": "Certificate not found"
+          }
+        }
+      }
+    },
+    "/api/v1/certificates/{certificateId}/revoke": {
+      "post": {
+        "tags": ["Certificates"],
+        "summary": "Revoke a certificate (admin)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Certificate revoked"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Certificate not found"
+          },
+          "409": {
+            "description": "Certificate is already revoked"
+          }
+        }
+      }
+    },
+    "/api/v1/certificates/{certificateId}/pdf": {
+      "get": {
+        "tags": ["Certificates"],
+        "summary": "Download a certificate PDF",
+        "description": "Owners and administrators only. Revoked certificates return 404.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Certificate PDF",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "404": {
+            "description": "Certificate not found"
+          }
+        }
+      }
+    },
+    "/api/v1/notifications": {
+      "get": {
+        "tags": ["Notifications"],
+        "summary": "List notifications for the current user",
+        "description": "Paginated, newest first. Set unreadOnly=true to filter unread items.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notification page with pagination metadata"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Missing notification permission"
+          },
+          "422": {
+            "description": "Invalid query parameters"
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/unread-count": {
+      "get": {
+        "tags": ["Notifications"],
+        "summary": "Count unread notifications for the current user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unread count"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/preferences": {
+      "get": {
+        "tags": ["Notifications"],
+        "summary": "Get notification preferences",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "In-app and email preferences by category"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Notifications"],
+        "summary": "Update notification preferences",
+        "description": "Only supplied categories and channels are changed; unspecified values keep their defaults.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated preferences"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "422": {
+            "description": "Invalid preference payload"
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/read-all": {
+      "post": {
+        "tags": ["Notifications"],
+        "summary": "Mark all notifications as read for the current user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Number of notifications updated"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/{id}/read": {
+      "post": {
+        "tags": ["Notifications"],
+        "summary": "Mark one notification as read",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated notification"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "404": {
+            "description": "Notification not found or owned by another user"
+          }
+        }
+      }
+    },
+    "/api/v1/announcements": {
+      "post": {
+        "tags": ["Announcements"],
+        "summary": "Publish a course announcement",
+        "description": "Course instructors and administrators only. Notification fan-out runs as an idempotent background job.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Announcement published"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Not the course instructor"
+          },
+          "404": {
+            "description": "Course not found"
+          },
+          "422": {
+            "description": "Invalid announcement payload"
+          }
+        }
+      }
+    },
+    "/api/v1/announcements/course/{courseId}": {
+      "get": {
+        "tags": ["Announcements"],
+        "summary": "List announcements for a course",
+        "description": "Available to enrolled learners, the course instructor, and administrators.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Announcement page with pagination metadata"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "404": {
+            "description": "Course not found or inaccessible"
+          }
+        }
+      }
+    },
+    "/api/v1/announcements/{id}": {
+      "delete": {
+        "tags": ["Announcements"],
+        "summary": "Delete an announcement",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Announcement deleted"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Not the course instructor or an administrator"
+          },
+          "404": {
+            "description": "Announcement not found"
+          }
+        }
+      }
+    },
+    "/api/v1/analytics/overview": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Get a role-scoped analytics overview",
+        "description": "Administrators receive platform-wide counts and bounded trends. Instructors receive performance for courses they teach. Students receive their own progress, grades, and upcoming assignments. All aggregates have hard result limits.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Overview shaped by the caller role"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Missing analytics permission or unsupported role"
+          }
+        }
+      }
+    },
+    "/api/v1/categories": {
+      "get": {
+        "tags": ["Categories"],
+        "summary": "List course categories",
+        "responses": {
+          "200": {
+            "description": "Category list"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Categories"],
+        "summary": "Create a category",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Category created"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "422": {
+            "description": "Invalid category"
+          }
+        }
+      }
+    },
+    "/api/v1/categories/{id}": {
+      "patch": {
+        "tags": ["Categories"],
+        "summary": "Update a category",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Category updated"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "404": {
+            "description": "Category not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Categories"],
+        "summary": "Delete a category",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Category deleted"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "409": {
+            "description": "Category has children"
+          }
+        }
+      }
+    },
+    "/api/v1/courses": {
+      "get": {
+        "tags": ["Courses"],
+        "summary": "Browse the published course catalog",
+        "description": "Paginated and filterable by category, tag, and search term.",
+        "responses": {
+          "200": {
+            "description": "Course page with pagination metadata"
+          },
+          "422": {
+            "description": "Invalid query"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Courses"],
+        "summary": "Create a draft course",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Course created"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "422": {
+            "description": "Invalid course"
+          }
+        }
+      }
+    },
+    "/api/v1/courses/mine": {
+      "get": {
+        "tags": ["Courses"],
+        "summary": "List courses you teach",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Instructor course list"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/v1/courses/{id}": {
+      "get": {
+        "tags": ["Courses"],
+        "summary": "Get a published course",
+        "responses": {
+          "200": {
+            "description": "Course detail"
+          },
+          "404": {
+            "description": "Course not found"
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Courses"],
+        "summary": "Update a course you own",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Course updated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Course not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Courses"],
+        "summary": "Delete a course",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Course deleted"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Course not found"
+          }
+        }
+      }
+    },
+    "/api/v1/courses/{id}/submit": {
+      "post": {
+        "tags": ["Courses"],
+        "summary": "Submit a course for review",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Course submitted"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "409": {
+            "description": "Invalid state"
+          }
+        }
+      }
+    },
+    "/api/v1/courses/{id}/publish": {
+      "post": {
+        "tags": ["Courses"],
+        "summary": "Publish a submitted course",
+        "description": "Requires the courses:publish permission.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Course published"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "409": {
+            "description": "Invalid state"
+          }
+        }
+      }
+    },
+    "/api/v1/courses/{id}/archive": {
+      "post": {
+        "tags": ["Courses"],
+        "summary": "Archive a course",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Course archived"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Course not found"
+          }
+        }
+      }
+    },
+    "/api/v1/courses/{id}/sections": {
+      "get": {
+        "tags": ["Courses"],
+        "summary": "List course sections",
+        "responses": {
+          "200": {
+            "description": "Section list"
+          },
+          "404": {
+            "description": "Course not found"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Courses"],
+        "summary": "Add a section",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Section created"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Course not found"
+          }
+        }
+      }
+    },
+    "/api/v1/courses/{id}/thumbnail": {
+      "post": {
+        "tags": ["Courses"],
+        "summary": "Upload a course thumbnail",
+        "description": "Multipart upload, 5 MB maximum, private storage.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thumbnail saved"
+          },
+          "400": {
+            "description": "File required"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/api/v1/courses/{id}/lessons": {
+      "get": {
+        "tags": ["Courses"],
+        "summary": "List lessons in a course",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lesson list"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "404": {
+            "description": "Course not found"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Courses"],
+        "summary": "Create a lesson",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Lesson created"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Course not found"
+          }
+        }
+      }
+    },
+    "/api/v1/courses/{id}/lessons/reorder": {
+      "post": {
+        "tags": ["Courses"],
+        "summary": "Reorder lessons with an ordered id list",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lessons reordered"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "422": {
+            "description": "Invalid order"
+          }
+        }
+      }
+    },
+    "/api/v1/lessons/{id}": {
+      "patch": {
+        "tags": ["Lessons"],
+        "summary": "Update a lesson you own",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lesson updated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Lesson not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Lessons"],
+        "summary": "Delete a lesson",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lesson deleted"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Lesson not found"
+          }
+        }
+      }
+    },
+    "/api/v1/lessons/{id}/complete": {
+      "post": {
+        "tags": ["Lessons"],
+        "summary": "Mark a lesson complete for the current learner",
+        "description": "Requires active access to the course that contains the lesson.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Completion recorded"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Lesson not found"
+          }
+        }
+      }
+    },
+    "/api/v1/lessons/{id}/asset": {
+      "get": {
+        "tags": ["Lessons"],
+        "summary": "Stream a protected lesson asset",
+        "description": "Owners and administrators bypass enrollment; other learners need active access.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Asset stream"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Asset not found"
+          }
+        }
+      }
+    },
+    "/api/v1/enrollments": {
+      "post": {
+        "tags": ["Enrollments"],
+        "summary": "Enroll in a published course",
+        "description": "Free courses become active immediately; paid courses start as pending_payment.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Enrolled"
+          },
+          "404": {
+            "description": "Course not found"
+          },
+          "409": {
+            "description": "Already enrolled"
+          },
+          "422": {
+            "description": "Invalid course id"
+          }
+        }
+      }
+    },
+    "/api/v1/enrollments/mine": {
+      "get": {
+        "tags": ["Enrollments"],
+        "summary": "List your enrollments with progress",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Enrollment and progress list"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/v1/enrollments/{id}/revoke": {
+      "post": {
+        "tags": ["Enrollments"],
+        "summary": "Revoke an enrollment",
+        "description": "Administrative action; writes an audit entry.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Enrollment revoked"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "404": {
+            "description": "Enrollment not found"
+          }
+        }
+      }
+    },
+    "/api/v1/enrollments/{id}/activate": {
+      "post": {
+        "tags": ["Enrollments"],
+        "summary": "Activate a pending enrollment",
+        "description": "Administrative action after payment confirmation; writes an audit entry.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Enrollment activated"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "404": {
+            "description": "Enrollment not found"
+          }
+        }
+      }
+    },
+    "/api/v1/assignments/mine": {
+      "get": {
+        "tags": ["Assignments"],
+        "summary": "List your submissions",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Submission history"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/v1/assignments/course/{courseId}": {
+      "get": {
+        "tags": ["Assignments"],
+        "summary": "List assignments in a course",
+        "description": "Learners see published assignments; instructors and administrators see all.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Assignment list"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "404": {
+            "description": "Course not found"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Assignments"],
+        "summary": "Create an assignment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Assignment created"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Course not found"
+          }
+        }
+      }
+    },
+    "/api/v1/assignments/{id}/submissions": {
+      "get": {
+        "tags": ["Assignments"],
+        "summary": "List submissions for grading",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Submission list"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Assignment not found"
+          }
+        }
+      }
+    },
+    "/api/v1/assignments/{id}/submit": {
+      "post": {
+        "tags": ["Assignments"],
+        "summary": "Submit an assignment",
+        "description": "Multipart upload with a 10 MB limit; requires active course access.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Submission received"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Assignment not found"
+          }
+        }
+      }
+    },
+    "/api/v1/assignments/{id}/publish": {
+      "post": {
+        "tags": ["Assignments"],
+        "summary": "Publish an assignment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Assignment published"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Assignment not found"
+          }
+        }
+      }
+    },
+    "/api/v1/assignments/{id}": {
+      "patch": {
+        "tags": ["Assignments"],
+        "summary": "Update an assignment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Assignment updated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Assignment not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Assignments"],
+        "summary": "Delete an assignment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Assignment deleted"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Assignment not found"
+          }
+        }
+      }
+    },
+    "/api/v1/assignments/submissions/{submissionId}/grade": {
+      "post": {
+        "tags": ["Assignments"],
+        "summary": "Grade a submission",
+        "description": "Course instructors and administrators only; writes an audit entry.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Submission graded"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Submission not found"
+          }
+        }
+      }
+    },
+    "/api/v1/quizzes/banks": {
+      "post": {
+        "tags": ["Quizzes"],
+        "summary": "Create a question bank",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Question bank created"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Course not found"
+          }
+        }
+      }
+    },
+    "/api/v1/quizzes/questions": {
+      "post": {
+        "tags": ["Quizzes"],
+        "summary": "Add a question to a bank",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Question added"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Bank not found"
+          }
+        }
+      }
+    },
+    "/api/v1/quizzes": {
+      "post": {
+        "tags": ["Quizzes"],
+        "summary": "Create a quiz",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Quiz created"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Bank not found"
+          }
+        }
+      }
+    },
+    "/api/v1/quizzes/{id}/publish": {
+      "post": {
+        "tags": ["Quizzes"],
+        "summary": "Publish a quiz",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Quiz published"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Quiz not found"
+          }
+        }
+      }
+    },
+    "/api/v1/quizzes/{id}/attempts": {
+      "post": {
+        "tags": ["Quizzes"],
+        "summary": "Start a timed attempt",
+        "description": "Requires active course access and an available attempt.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Attempt started"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Quiz not found"
+          },
+          "409": {
+            "description": "Attempt limit reached or quiz misconfigured"
+          }
+        }
+      }
+    },
+    "/api/v1/quizzes/attempts/{id}": {
+      "get": {
+        "tags": ["Quizzes"],
+        "summary": "Get an attempt without correct answers",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Attempt and questions"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "404": {
+            "description": "Attempt not found"
+          }
+        }
+      }
+    },
+    "/api/v1/quizzes/attempts/{id}/answers": {
+      "post": {
+        "tags": ["Quizzes"],
+        "summary": "Save an answer during an attempt",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Answer saved"
+          },
+          "404": {
+            "description": "Attempt not found"
+          },
+          "409": {
+            "description": "Attempt expired"
+          }
+        }
+      }
+    },
+    "/api/v1/quizzes/attempts/{id}/submit": {
+      "post": {
+        "tags": ["Quizzes"],
+        "summary": "Submit an attempt for grading",
+        "description": "Server-authoritative expiry; objective questions are graded immediately.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Attempt submitted"
+          },
+          "404": {
+            "description": "Attempt not found"
+          },
+          "409": {
+            "description": "Attempt expired"
+          }
+        }
+      }
+    },
+    "/api/v1/quizzes/attempts/{id}/grade": {
+      "post": {
+        "tags": ["Quizzes"],
+        "summary": "Manually grade a short-answer attempt",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Attempt graded"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Attempt not found"
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}

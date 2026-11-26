@@ -23,7 +23,7 @@ function PhaseStatusLabel({ status }: { status: PhaseStatus }) {
   }
 
   return (
-    <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.14em] text-background/40 uppercase">
+    <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.14em] text-background/85 uppercase">
       <Circle className="size-2.5" aria-hidden="true" />
       Planned
     </span>
@@ -42,7 +42,7 @@ export function RoadmapSection() {
             <h2 className="mt-3 font-display text-3xl font-semibold tracking-[-0.02em] text-balance sm:text-4xl">
               Fifteen phases. No skipped foundations.
             </h2>
-            <p className="mt-4 text-base leading-relaxed text-background/60">
+            <p className="mt-4 text-base leading-relaxed text-background/85">
               Each phase ships with a working vertical slice, documentation, and a green quality
               gate before the next one begins.
             </p>
@@ -73,7 +73,7 @@ export function RoadmapSection() {
                 />
               ) : null}
               <div className="flex items-center justify-between gap-4">
-                <span className="font-mono text-[11px] tracking-wide text-background/40">
+                <span className="font-mono text-[11px] tracking-wide text-background/85">
                   Phase {String(phase.number).padStart(2, '0')}
                 </span>
                 <PhaseStatusLabel status={phase.status} />
@@ -81,12 +81,12 @@ export function RoadmapSection() {
               <h3 className="mt-3 font-display text-lg font-medium tracking-tight">
                 {phase.title}
               </h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-background/50">{phase.summary}</p>
+              <p className="mt-1.5 text-sm leading-relaxed text-background/85">{phase.summary}</p>
             </li>
           ))}
         </ol>
 
-        <p className="mt-6 max-w-3xl text-sm leading-relaxed text-background/45">
+        <p className="mt-6 max-w-3xl text-sm leading-relaxed text-background/85">
           Phase gates are non-negotiable: formatting, lint, strict typecheck, tests, production
           build, and a written handoff. Security and accessibility checks are reviewed at every
           gate, not postponed to the end.

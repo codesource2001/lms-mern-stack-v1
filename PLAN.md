@@ -15,9 +15,9 @@ This file is the executable roadmap. The original product brief is preserved ver
 
 | Field           | Value                                                                    |
 | --------------- | ------------------------------------------------------------------------ |
-| Current phase   | **Phase 14 — complete with live-deployment caveat**                      |
-| Next phase      | **Phase 15 — production documentation**                                  |
-| Last verified   | 25 November 2026                                                         |
+| Current phase   | **Phase 15 — complete**                                                  |
+| Next phase      | **Maintenance — see `docs/RELEASE-NOTES.md`**                            |
+| Last verified   | 26 November 2026                                                         |
 | Runtime         | Node.js 24.14.1, npm 11.12.1, Docker 29.8.1                              |
 | Apps            | `frontend/` (`@atrium/frontend`), `backend/` (`@atrium/backend`)         |
 | Source of truth | `PLAN.md` for work sequencing, `AGENTS.md` for rules, ADRs for decisions |
@@ -751,16 +751,40 @@ Deployment topology, seed/index procedures, health checks, backup, and rollback:
 
 **Depends on:** Phase 14.
 
-- [ ] Finalize README with deployment topology and operational commands
-- [ ] API reference export and versioning policy
-- [ ] Operations runbook: backups, restores, Redis eviction, MongoDB indexes, certificate jobs
-- [ ] Incident response and secret rotation guides
-- [ ] Onboarding guide for maintainers
-- [ ] Architecture and ADR index reconciliation
-- [ ] Final security and accessibility sign-off
-- [ ] Release notes and handoff checklist
+- [x] Finalize README with deployment topology and operational commands
+- [x] API reference export and versioning policy
+- [x] Operations runbook: backups, restores, Redis eviction, MongoDB indexes, certificate jobs
+- [x] Incident response and secret rotation guides
+- [x] Onboarding guide for maintainers
+- [x] Architecture and ADR index reconciliation
+- [x] Final security and accessibility sign-off
+- [x] Release notes and handoff checklist
 
-**Acceptance:** A new maintainer can run, deploy, and troubleshoot the system using repository documentation only.
+### Phase 15 verification evidence
+
+| Check                     | Command / action                            | Result                                               |
+| ------------------------- | ------------------------------------------- | ---------------------------------------------------- |
+| Format / Lint / Typecheck | `npm run format:check`, `lint`, `typecheck` | Pass                                                 |
+| Unit tests                | `npm run test`                              | 180 tests pass (168 backend, 12 frontend)            |
+| Build                     | `npm run build`                             | Pass                                                 |
+| E2E                       | `npm run test:e2e`                          | 4 passed (2 UI, 2 axe), 2 stack tests skipped        |
+| API reference             | `npm run docs:api`                          | 71 OpenAPI paths exported to `docs/api/openapi.json` |
+| Compose configs           | dev and prod `docker compose config`        | Pass                                                 |
+
+Documentation set: [`README.md`](README.md), [`docs/API.md`](docs/API.md), [`docs/OPERATIONS.md`](docs/OPERATIONS.md), [`docs/INCIDENT-RESPONSE.md`](docs/INCIDENT-RESPONSE.md), [`docs/ONBOARDING.md`](docs/ONBOARDING.md), [`docs/DECISIONS.md`](docs/DECISIONS.md), [`docs/SIGN-OFF.md`](docs/SIGN-OFF.md), [`docs/RELEASE-NOTES.md`](docs/RELEASE-NOTES.md).
+
+### Phase 15 decisions and known constraints
+
+- **OpenAPI is now complete at path level.** Courses, categories, lessons, enrollments, assignments, and quizzes were registered, bringing the exported document to 71 paths. Request schemas are registered where Zod-to-OpenAPI is already in place; some path summaries describe bodies that are not schema-registered.
+- **Axe scans found a real contrast defect.** Low-opacity text on the dark home sections was raised to `text-background/85`; the home and login scans now pass with no serious or critical WCAG A/AA violations.
+- **Sign-off is conditional.** It records open items: live container verification, full-stack E2E, full CSP/TLS at the edge, field-error associations, dark-mode contrast, and distributed rate limiting.
+- **Documentation, not code, was the focus.** The only behavior changes were the contrast fix and the added axe checks required for an honest sign-off.
+- **The live-deployment caveat remains.** A new maintainer can follow the documented steps, but those steps have not been executed on a clean host with Docker here.
+
+**Acceptance status — met with documented caveat**
+
+- The repository documentation now covers running, deploying, troubleshooting, backing up, rotating secrets, onboarding, and rolling back.
+- Conditional sign-off and release notes state exactly what remains before public production traffic.
 
 ---
 
@@ -836,6 +860,7 @@ Tracked for resolution in the phase that needs them:
 
 | Date       | Change                                                                                    |
 | ---------- | ----------------------------------------------------------------------------------------- |
+| 2026-11-26 | Phase 15 complete: full API reference, operations docs, sign-off, 4 E2E checks.           |
 | 2026-11-25 | Phase 14 complete: Docker topology, E2E, coverage, runbook, 180 tests.                    |
 | 2026-11-25 | Phase 13 complete: security audit, access fixes, route limits, 175 tests.                 |
 | 2026-11-25 | Phase 12 complete: notifications, jobs, announcements, analytics, dashboards, 166 tests.  |

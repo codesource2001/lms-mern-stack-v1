@@ -20,7 +20,8 @@
     "seed": "tsx src/seeds/seed.cli.ts",
     "seed:prod": "node dist/seeds/seed.cli.js",
     "indexes": "tsx src/seeds/indexes.cli.ts",
-    "indexes:prod": "node dist/seeds/indexes.cli.js"
+    "indexes:prod": "node dist/seeds/indexes.cli.js",
+    "docs:api": "tsx src/docs/export-openapi.cli.ts"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "9.1.0",
@@ -64,6 +65,7 @@
     "eslint-config-prettier": "10.1.8",
     "globals": "17.14.0",
     "pino-pretty": "13.2.0",
+    "prettier": "3.10.1",
     "supertest": "7.3.2",
     "tsx": "4.23.15",
     "typescript": "5.9.3",

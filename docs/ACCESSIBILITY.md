@@ -1,9 +1,9 @@
 # Accessibility checklist — Atrium LMS frontend
 
-| Field         | Value                         |
-| ------------- | ----------------------------- |
-| Current build | Phase 4 — frontend foundation |
-| Last reviewed | 25 November 2026              |
+| Field         | Value                     |
+| ------------- | ------------------------- |
+| Current build | Phase 15 — final sign-off |
+| Last reviewed | 26 November 2026          |
 
 ## Baseline rules
 
@@ -22,8 +22,8 @@
 - [x] Buttons and links are keyboard operable.
 - [x] Reduced-motion friendly transitions only; no required animation.
 - [x] Theme toggle does not rely on color alone.
-- [ ] Full keyboard-navigation audit for sidebar, dropdowns, dialogs, and selects.
-- [ ] Automated axe or Playwright accessibility checks.
-- [ ] Dark-mode contrast verification for every primitive.
+- [x] Automated axe checks for public home and login pages (WCAG 2/2.1 A/AA tags)
+- [~] Full keyboard-navigation audit for sidebar, dropdowns, dialogs, and selects (automated focus checks only)
+- [ ] Dark-mode contrast verification for every primitive
 
-Automated accessibility checks are completed in Phase 14 with Playwright.
+Phase 15 axe scans found low-opacity text on the dark home sections. The affected labels and paragraphs were raised to `text-background/85` and the scans now pass with no serious or critical violations. The sign-off in [`SIGN-OFF.md`](SIGN-OFF.md) records the remaining manual checks.
